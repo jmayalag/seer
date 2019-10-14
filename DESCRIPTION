@@ -1,0 +1,27 @@
+Package: seer
+Title: Stock prediction functions
+Version: 0.1.0
+Authors@R: person("Jordan", "Ayala", email = "jmayalag@gmail.com", role = c("aut", "cre"))
+Description: This package allows us to predict the direction of the stock market.
+Depends: R (>= 3.5.2)
+License: MIT
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    OHLCMerge (>= 0.2.0),
+    xts,
+    quantmod,
+    dplyr,
+    tidyr,
+    ggplot2,
+    purrr,
+    TTR,
+    data.table,
+    caret,
+    e1071
+Remotes: 
+    jmayalag/OHLCMerge
+RoxygenNote: 6.1.1
+Suggests: 
+    highcharter (>= 0.7.0),
+    testthat (>= 2.1.0)

@@ -28,23 +28,16 @@ testing <- matrix[!in_training, ]
 # 10-fold CV, repeated 10 times
 fitControl <- trainControl(
   method = "repeatedcv",
-  number = 10,
-  repeats = 10
+  number = 5,
+  repeats = 5
 )
 
-train_nnet <- train(.outcome ~ .,
-  data = training,
-  method = "nnet",
-  trControl = fitControl,
-  verbose = FALSE,
-  # nnet params
-  linout = TRUE,
-  skip = TRUE,
-  MaxNWts = 10000,
-  maxit = 1000
+grid_nnet <- expand.grid(
+  size = c(1, 5, 10, 30, 50, 70, 100),
+  decay = c(0, 0.1, 0.01, 0.001, 0.0001)
 )
 
-fit_nnet <- train_nnet$finalModel
+fit_nnet <- train_nnet(training, fitControl, grid = grid_nnet)
 
 tsp$predicted <- as.numeric(predict(fit_nnet, tsp))
 tsp$dataset <- "1.training"
@@ -62,5 +55,5 @@ tb %>%
 training <- tsp %>% filter(dataset == "1.training")
 testing <- tsp %>% filter(dataset == "2.testing")
 
-RMSE(training$predicted, training$.outcome)
-RMSE(testing$predicted, testing$.outcome)
+RMSE(training$predicted, training$observed)
+RMSE(testing$predicted, testing$observed)

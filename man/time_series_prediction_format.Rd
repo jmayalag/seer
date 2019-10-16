@@ -17,6 +17,8 @@ time_series_prediction_format(source, pred_col = "Close",
 \item{max_window}{maximo ventana a usar para el historico (w = 0 solo utiliza el dia actual )}
 
 \item{discard}{descarta n primeros valores para que los restantes sean multiplos de w + h}
+
+\item{overlap}{indica si se permite utilizar una observacion del tiempo t en mas de un caso.}
 }
 \value{
 un data.frame formateado para la prediccion
@@ -25,5 +27,7 @@ un data.frame formateado para la prediccion
 Se puede especificar un valor alto de max_window y max_prediction_horizon si se va a reutilizar el data.frame
 }
 \examples{
+\dontrun{
 time_series_prediction_format(AAPL)
+}
 }

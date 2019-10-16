@@ -3,7 +3,7 @@ Title: Stock prediction functions
 Version: 0.1.0
 Authors@R: person("Jordan", "Ayala", email = "jmayalag@gmail.com", role = c("aut", "cre"))
 Description: This package allows us to predict the direction of the stock market.
-Depends: R (>= 3.5.2)
+Depends: R (>= 3.5.0)
 License: MIT
 Encoding: UTF-8
 LazyData: true
@@ -18,7 +18,10 @@ Imports:
     TTR,
     data.table,
     caret,
-    e1071
+    e1071,
+    magrittr,
+    rlang,
+    zoo
 Remotes: 
     jmayalag/OHLCMerge
 RoxygenNote: 6.1.1

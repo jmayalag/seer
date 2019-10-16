@@ -8,23 +8,22 @@ El data.frame solo debe tener las columnas de input, y el output con el nombre '
 train_nnet(training, fitControl, grid)
 }
 \arguments{
-\item{training}{data.frame de entrenamiento}
+\item{training}{data.frame de entrenamiento.}
 
-\item{fitControl}{parametros para el entrenamiento}
+\item{fitControl}{parametros para el entrenamiento.}
 
-\item{grid}{espacio de busqueda de parametros}
+\item{grid}{espacio de busqueda de parametros.}
 }
 \value{
-resultados del entrenamiento
+Resultados del entrenamiento.
 }
 \description{
 Entrena nnet
 El data.frame solo debe tener las columnas de input, y el output con el nombre '.outcome'.
 }
 \examples{
-
 \dontrun{
-x <- time_series_prediction_format(AAPL, max_horizon=1, max_window=2)
-train_nnet(x, grid=c(size=10, decay=0.1))
+x <- time_series_prediction_format(AAPL, max_horizon = 1, max_window = 2)
+train_nnet(x, grid = c(size = 10, decay = 0.1))
 }
 }

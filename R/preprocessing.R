@@ -7,13 +7,16 @@
 #' @param max_horizon maximo horizonte de prediccion
 #' @param max_window maximo ventana a usar para el historico (w = 0 solo utiliza el dia actual )
 #' @param discard descarta n primeros valores para que los restantes sean multiplos de w + h
+#' @param overlap indica si se permite utilizar una observacion del tiempo t en mas de un caso.
 #'
 #' @return un data.frame formateado para la prediccion
 #'
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' time_series_prediction_format(AAPL)
+#' }
 time_series_prediction_format <- function(source,
                                           pred_col = "Close",
                                           max_horizon = 1,
@@ -47,7 +50,7 @@ time_series_prediction_format <- function(source,
   class(data) <- c("ts.prediction", class(data))
 
   if (discard) {
-    data <- data[complete.cases(data), ]
+    data <- data[stats::complete.cases(data), ]
   }
 
   if (!overlap) {

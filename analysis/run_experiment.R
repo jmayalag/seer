@@ -67,7 +67,7 @@ run_test <- function(x, h, w, dataset, save_dir = "results") {
     pivot_longer(c("nnet", "lm", "rf", "evtree"), names_to = "model", values_to = "predicted") %>%
     group_by(set, model) %>%
     summarise(
-      RMSE = sqrt((predicted - observed)^2) / n(),
+      RMSE = sqrt(sum(predicted - observed)^2 / n()) ,
       MAE = mean(abs(predicted - observed)),
       h = h,
       w = w,

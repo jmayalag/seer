@@ -21,9 +21,13 @@ Imports:
     e1071,
     magrittr,
     rlang,
-    zoo
-Remotes: 
-    jmayalag/OHLCMerge
+    zoo,
+    blotter (>= 0.14.7),
+    quantstrat (>= 0.16.2)
+Remotes:  
+    jmayalag/OHLCMerge,
+    braverock/blotter,
+    braverock/quantstrat
 RoxygenNote: 6.1.1
 Suggests: 
     highcharter (>= 0.7.0),

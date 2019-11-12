@@ -22,9 +22,11 @@ Imports:
     magrittr,
     rlang,
     zoo,
+    PerformanceAnalytics,
+    FinancialInstrument,
     blotter (>= 0.14.7),
-    quantstrat (>= 0.16.2)
-Remotes:  
+    quantstrat (>= 0.16.2),
+Remotes: 
     jmayalag/OHLCMerge,
     braverock/blotter,
     braverock/quantstrat

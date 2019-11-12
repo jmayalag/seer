@@ -8,7 +8,7 @@ ml_nnet <- function(training, file) {
   }
   # 10-fold CV, repeated 10 times
   fit_control <- trainControl(
-    method = "repeatedcv",
+    method = "none",
     number = 5,
     repeats = 5
   )
@@ -35,7 +35,7 @@ ml_randomforest <- function(training, file) {
 
   # 10-fold CV, repeated 10 times
   fit_control <- trainControl(
-    method = "repeatedcv",
+    method = "none",
     number = 5,
     repeats = 5
   )
@@ -56,7 +56,7 @@ ml_evtree <- function(training, file) {
 
   # 10-fold CV, repeated 10 times
   fit_control <- trainControl(
-    method = "repeatedcv",
+    method = "none",
     number = 5,
     repeats = 5
   )

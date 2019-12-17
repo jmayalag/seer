@@ -1,6 +1,6 @@
 Package: seer
 Title: Stock prediction functions
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: person("Jordan", "Ayala", email = "jmayalag@gmail.com", role = c("aut", "cre"))
 Description: This package allows us to predict the direction of the stock market.
 Depends: R (>= 3.5.0)

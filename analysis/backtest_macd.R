@@ -30,6 +30,7 @@ paramset <- list(
 
 
 library(seer)
+library(readr)
 
 out_dir <- file.path("./results_paper/backtest_opt/macd")
 if (!dir.exists(out_dir))
@@ -47,7 +48,7 @@ optimize <- function(filename, outputdir) {
     for (nSlow in paramset$.nSlow) {
       if (nFast < nSlow) {
         params <- paste0(c("macd", nFast, nSlow), collapse = "_")
-        rdata.name <- file.path(outputdir, paste0(name, params, ".RData"))
+        rdata.name <- file.path(outputdir, paste0(name, params, ".rds"))
         if (file.exists(rdata.name)) {
           print(paste(rdata.name, "already exists. Skipping"))
           next
@@ -66,7 +67,7 @@ optimize <- function(filename, outputdir) {
         dt <- difftime(b, a, units = "secs")
         message(paste("Finished in ", dt, "secs"))
         
-        try(save(results, file = rdata.name), outFile = log_file)
+        try(write_rds(results, path = rdata.name), outFile = log_file)
       }
     }
   }

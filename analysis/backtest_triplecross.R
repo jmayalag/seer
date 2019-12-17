@@ -25,6 +25,7 @@ if (!interactive()) {
 }
 
 library(seer)
+library(readr)
 
 paramset <- list(
   .nFast = 1:20,
@@ -48,7 +49,7 @@ optimize <- function(filename, outputdir) {
       for (nSlow in paramset$.nSlow) {
         if (nFast < nMedium & nMedium < nSlow) {
           params <- paste0(c("triple_cross", nFast, nMedium, nSlow), collapse = "_")
-          rdata.name <- file.path(outputdir, paste0(name, params, ".RData"))
+          rdata.name <- file.path(outputdir, paste0(name, params, ".rds"))
           if (file.exists(rdata.name)) {
             print(paste(rdata.name, "already exists. Skipping"))
             next
@@ -66,7 +67,7 @@ optimize <- function(filename, outputdir) {
           b <- Sys.time()
           dt <- difftime(b, a, units = "secs")
           message(paste("Finished in ", dt, "secs"))
-          try(save(results, file = rdata.name), outFile = log_file)
+          try(write_rds(results, path = rdata.name), outFile = log_file)
         }
       }
     }

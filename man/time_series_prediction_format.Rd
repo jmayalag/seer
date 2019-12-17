@@ -4,8 +4,14 @@
 \alias{time_series_prediction_format}
 \title{Convierte datos OHLC a formato requerido para prediccion de series de tiempo.}
 \usage{
-time_series_prediction_format(source, pred_col = "Close",
-  max_horizon = 1, max_window = 2, discard = TRUE, overlap = FALSE)
+time_series_prediction_format(
+  source,
+  pred_col = "Close",
+  max_horizon = 1,
+  max_window = 2,
+  discard = TRUE,
+  overlap = FALSE
+)
 }
 \arguments{
 \item{source}{un OHLC de tipo xts}

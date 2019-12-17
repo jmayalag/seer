@@ -30,7 +30,7 @@ Remotes:
     jmayalag/OHLCMerge,
     braverock/blotter,
     braverock/quantstrat
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.2
 Suggests: 
     highcharter (>= 0.7.0),
     testthat (>= 2.1.0)

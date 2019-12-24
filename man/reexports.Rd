@@ -4,6 +4,7 @@
 \name{reexports}
 \alias{reexports}
 \alias{read_ohlcv}
+\alias{read_dataset}
 \alias{EMA}
 \alias{MACD}
 \title{Objects exported from other packages}
@@ -13,7 +14,7 @@ These objects are imported from other packages. Follow the links
 below to see their documentation.
 
 \describe{
-  \item{OHLCMerge}{\code{\link[OHLCMerge]{read_ohlcv}}}
+  \item{OHLCMerge}{\code{\link[OHLCMerge]{read_dataset}}, \code{\link[OHLCMerge]{read_ohlcv}}}
 
   \item{TTR}{\code{\link[TTR]{EMA}}, \code{\link[TTR]{MACD}}}
 }}

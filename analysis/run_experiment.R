@@ -1,7 +1,6 @@
 library(OHLCMerge)
 library(quantmod)
 library(seer)
-library(tidyquant)
 library(caret)
 library(dplyr)
 library(tidyr)
@@ -81,7 +80,7 @@ run_test <- function(x, h, w, dataset, save_dir = "results") {
 }
 
 # Config ----
-dataset_dir <- "~/Downloads/datasets_paper"
+dataset_dir <- "~/datasets/datasets_paper"
 
 datasets <- c("ES35_D1", "GERMAN30_D1", "US30_D1")
 

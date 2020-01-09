@@ -3,6 +3,9 @@ library(caret)
 library(tidyverse)
 library(xts)
 library(quantmod)
+library(nnet)
+
+Sys.setenv(TZ = "UTC")
 
 x <- read_ohlcv("~/datasets/datasets_paper/ES35_D1.csv")
 w <- 10
@@ -58,7 +61,9 @@ tidy <- tb %>%
   mutate(actual = observed) %>%
   pivot_longer(c("nnet", "lm", "actual"), names_to = "method", values_to = "predicted")
 
-tidy %>% ggplot(aes(x = index, y = predicted, color = method, linetype = method)) +
+tidy %>% 
+  mutate(set = if_else(set == "train", "1. train", "2. test")) %>%
+  ggplot(aes(x = index, y = predicted, color = method, linetype = method)) +
   geom_line() +
   facet_wrap(~set, scales = "free_x")
 
@@ -73,6 +78,12 @@ summary <- tidy %>%
 
 summary
 
-xts_pred <- xts(tb %>% select(-c(index, set, observed)), tb$index)
+xts_pred <- tb %>% 
+  mutate(prediction = nnet, in_training = if_else(set == "train", 1, 0)) %>% 
+  select(index, prediction, in_training) %>%
+  df_to_xts(order_by = index)
+
 
 x <- cbind(x, xts_pred)
+
+x

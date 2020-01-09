@@ -46,17 +46,16 @@ run_test <- function(x, h, w, dataset, save_dir = "results") {
   fit_evtree <- ml_evtree(training, glue("{models_dir}/{file_prefix}_evtree.rds"))
   fit_lm <- glm(.outcome ~ ., data = training)
 
-  message("Training nnet")
+  # Predict ----
   tsp$nnet <- as.numeric(predict(fit_nnet$finalModel, tsp))
-  message("Training randomForest")
   tsp$rf <- predict(fit_rf$finalModel, tsp)
-  message("Training evtree")
   tsp$evtree <- predict(fit_evtree$finalModel, tsp)
-  message("Training linear model")
   tsp$lm <- predict(fit_lm, tsp)
 
+  # set column to identify train/test observations
   tsp$set <- if_else(in_training, "train", "test")
 
+  # Rename back the .outcome variable
   tb <- tsp %>%
     as_tibble() %>%
     rename(observed = .outcome) %>%

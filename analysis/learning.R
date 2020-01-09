@@ -6,11 +6,10 @@ ml_nnet <- function(training, file) {
   if (file.exists(file)) {
     return(read_rds(file))
   }
-  # 10-fold CV, repeated 10 times
+  
   fit_control <- trainControl(
     method = "none",
-    number = 5,
-    repeats = 5
+    number = 1,
   )
 
   grid <- expand.grid(
@@ -36,8 +35,7 @@ ml_randomforest <- function(training, file) {
   # 10-fold CV, repeated 10 times
   fit_control <- trainControl(
     method = "none",
-    number = 5,
-    repeats = 5
+    number = 1,
   )
 
   fit <-train_rf(training, fit_control)
@@ -57,8 +55,8 @@ ml_evtree <- function(training, file) {
   # 10-fold CV, repeated 10 times
   fit_control <- trainControl(
     method = "none",
-    number = 5,
-    repeats = 5
+    number = 1,
+    repeats = 1
   )
 
   grid <- expand.grid(

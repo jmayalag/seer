@@ -13,10 +13,20 @@ OHLCMerge::read_dataset
 #'
 #' @return un xts
 #' @export
-df_to_xts <- function(x, order_by = index){
+df_to_xts <- function(x, order_by = index) {
   order_by_enquo <- dplyr::enquo(order_by)
   core_data <- dplyr::select(x, -!!order_by_enquo)
   order_by_data <- dplyr::pull(x, !!order_by_enquo)
-  
+
   xts(core_data, order.by = order_by_data)
+}
+
+#' Convierte un xts a un data.frame
+#'
+#' @param x el objeto xts
+#'
+#' @return un data.frame
+#' @export
+xts_to_df <- function(x) {
+  data.frame(index = zoo::index(x), zoo::coredata(x))
 }

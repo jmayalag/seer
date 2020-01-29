@@ -11,6 +11,8 @@ x <- read_ohlcv("~/datasets/datasets_paper/ES35_D1.csv")
 w <- 10
 h <- 1
 tsp <- time_series_prediction_format(x, max_horizon = h, max_window = w)
+tsp2 <- time_series_prediction_format(x, max_horizon = h, max_window = w, overlap = TRUE)
+
 # Lags, prediction, index
 pred_column <- names(tsp)[w + h]
 columns <- names(tsp)[c(1:w, w + h, w + h + 1)]
@@ -78,12 +80,11 @@ summary <- tidy %>%
 
 summary
 
-xts_pred <- tb %>% 
-  mutate(prediction = nnet, in_training = if_else(set == "train", 1, 0)) %>% 
-  select(index, prediction, in_training) %>%
-  df_to_xts(order_by = index)
+xts_pred <- tsp2 %>% 
+  mutate(prediction = as.numeric(predict(fit_nnet, tsp2))) %>%
+  select(index, prediction) %>%
+  df_to_xts()
 
-
-x <- cbind(x, xts_pred)
-
-x
+xts_with_pred <- cbind(x, xts_pred)
+df <- as_tibble(coredata((xts_with_pred))) %>%
+  add_column(index = index(xts_with_pred), .before = 1)

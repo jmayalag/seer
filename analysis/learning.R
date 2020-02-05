@@ -17,7 +17,7 @@ ml_nnet <- function(training, file) {
     decay = c(0, 0.1, 0.01, 0.001, 0.0001)
   )
 
-  fit <- train_nnet(training, fit_control, grid = grid)
+  fit <- train_nnet(training, fit_control, grid = head(grid, 1))
 
   write_rds(x = fit, path = file)
   fit
@@ -56,14 +56,13 @@ ml_evtree <- function(training, file) {
   fit_control <- trainControl(
     method = "none",
     number = 1,
-    repeats = 1
   )
 
   grid <- expand.grid(
     alpha = c(0.1, 0.25, 0.5, 0.8, 1, 3, 5)
   )
 
-  fit <- train_evtree(training, fit_control, grid = grid)
+  fit <- train_evtree(training, fit_control, grid = head(grid, 1))
 
   write_rds(x = fit, path = file)
 }

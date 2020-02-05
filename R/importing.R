@@ -6,6 +6,10 @@ OHLCMerge::read_ohlcv
 #' @export
 OHLCMerge::read_dataset
 
+#' @importFrom OHLCMerge load_dataset
+#' @export
+OHLCMerge::load_dataset
+
 #' Convierte un data.frame a un xts
 #'
 #' @param x datos a utilizar. Todas las columnas deben ser numericas

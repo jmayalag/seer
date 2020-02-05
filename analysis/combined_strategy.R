@@ -4,12 +4,13 @@ library(dplyr)
 library(seer)
 library(quantstrat)
 
-conservative_signals <- function(strat) {
+
+semiconservative_signals <- function(strat) {
   strat <- add.signal(
     strategy = strat,
     name = "sigFormula",
     arguments = list(
-      formula = "enterLong & pred_bull",
+      formula = "enterLong | (enterLong & pred_bull)",
       cross = TRUE
     ),
     label = "enterLongPred"
@@ -28,6 +29,30 @@ conservative_signals <- function(strat) {
   strat
 }
 
+conservative_signals <- function(strat) {
+  strat <- add.signal(
+    strategy = strat,
+    name = "sigFormula",
+    arguments = list(
+      formula = "enterLong & pred_bull",
+      cross = TRUE
+    ),
+    label = "enterLongPred"
+  )
+
+  strat <- add.signal(
+    strategy = strat,
+    name = "sigFormula",
+    arguments = list(
+      formula = "exitLong | pred_bear",
+      cross = TRUE
+    ),
+    label = "exitLongPred"
+  )
+
+  strat
+}
+
 risky_signals <- function(strat) {
   strat <- add.signal(
     strategy = strat,
@@ -38,17 +63,17 @@ risky_signals <- function(strat) {
     ),
     label = "enterLongPred"
   )
-  
+
   strat <- add.signal(
     strategy = strat,
     name = "sigFormula",
     arguments = list(
-      formula = "exitLong & pred_bear",
+      formula = "exitLong | pred_bear",
       cross = TRUE
     ),
     label = "exitLongPred"
   )
-  
+
   strat
 }
 
@@ -93,22 +118,68 @@ ml_strat <- function(base_strategy, approach, fees = 0) {
 
   strat <- add_exit_rule(strategy = strat, fees = fees, sigcol = "exitLongPred")
 
-  strat
+  if (getOption("sell_at_end", TRUE)) {
+    .sell_at_end(strat, fees = fees)
+  } else {
+    strat
+  }
 }
+
+library(randomForest)
+library(seer)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+mkt <- read_ohlcv("~/datasets/datasets_paper/ES35_D1.csv")
+model_path <- "results/models/h1_w3_dES35_D1_rf.rds"
+params <- parse_params(model_path)
+
+
+fit <- readr::read_rds(model_path)
+
+model <- fit$finalModel
+
+x <- mkt
+x_pred <- predict_xts(model, x, h = params$h, w = params$w)
 
 order_size <- 100
 fees <- 0
 
+mkt <- x_pred
 set.seed(42)
-mkt <- read_ohlcv("~/datasets/datasets_paper/ES35_D1.csv")
 base_strategy <- macd()
 mkt <- seer::apply_indicator_signals(base_strategy, mkt)
-mkt$pred_bear <- runif(nrow(mkt)) < 0.5
-mkt$pred_bull <- runif(nrow(mkt)) > 0.5
+mkt$enterLong <- replace_na(mkt$enterLong, 0)
+mkt$exitLong <- replace_na(mkt$exitLong, 0)
+
+mkt$pred_bull_ind <- mkt$pred > mkt$Close
+mkt$pred_bear_ind <- mkt$pred < mkt$Close
+
+# Crossover signal, 1 only for the first observation in a row
+mkt$pred_bull <- mkt$pred_bull_ind - replace_na(lag.xts(mkt$pred_bull_ind), 0)
+mkt$pred_bull <- if_else(mkt$pred_bull == 1, 1, 0)
+mkt$pred_bear <- mkt$pred_bear_ind - replace_na(lag.xts(mkt$pred_bear_ind), 0)
+mkt$pred_bear <- if_else(mkt$pred_bear == 1, 1, 0)
+
 ES35_D1 <- mkt
 
-strat <- ml_strat("macd", approach = "conservative")
-result <- backtest.opt(strat, "ES35_D1")
+strat <- ml_strat(base_strategy$name, approach = "semiconservative")
+result_semiconservative <- backtest.opt(strat, "ES35_D1")
 
-strat <- ml_strat("macd", approach = "risky")
-result <- backtest.opt(strat, "ES35_D1")
+strat <- ml_strat(base_strategy$name, approach = "conservative")
+result_conservative <- backtest.opt(strat, "ES35_D1")
+
+strat <- ml_strat(base_strategy$name, approach = "risky")
+result_risky <- backtest.opt(strat, "ES35_D1")
+
+debg <- seer::apply_indicator_signals(strat, ES35_D1)
+
+strat <- base_strategy
+result_macd <- backtest.opt(strat, "ES35_D1")
+
+stats <- list(result_semiconservative, result_conservative, result_risky, result_macd) %>%
+  purrr::map_df(~ .x$stats) %>%
+  as_tibble()
+
+stats %>% select(strategy, Symbol, Num.Txns, Num.Trades, Net.Trading.PL, Avg.Trade.PL, Gross.Profits, Gross.Losses, Max.Drawdown)

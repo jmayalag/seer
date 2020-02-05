@@ -8,7 +8,7 @@ add_exit_rule(
   strategy,
   fees,
   sigcol = "exitLong",
-  label = "rule_exitLong",
+  label = paste0("rule_", sigcol),
   orderside = "long"
 )
 }

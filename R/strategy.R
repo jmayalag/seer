@@ -29,8 +29,10 @@ default_rule_arguments <- function(order_size, fees, ...) {
 #' @param orderside tipo de operacion (long | short)
 #'
 #' @return la estrategia con esta regla agregada
+#'
+#' @export
 #' @importFrom quantstrat strategy add.indicator add.rule add.signal ruleSignal
-add_exit_rule <- function(strategy, fees, sigcol = "exitLong", label="rule_exitLong", orderside="long") {
+add_exit_rule <- function(strategy, fees, sigcol = "exitLong", label = paste0("rule_", sigcol), orderside = "long") {
   add.rule(
     strategy = strategy,
     name = "ruleSignal",
@@ -424,6 +426,14 @@ buy_and_hold <- function(fees = 0) {
 }
 
 
+#' Cierra las ordenes pendientes al final del backtest
+#'
+#' @param strat objeto strategy
+#' @param fees 
+#'
+#' @return
+#' @export
+#' @importFrom quantstrat add.indicator add.signal add.rule ruleSignal sigThreshold
 .sell_at_end <- function(strat, fees) {
   strat <- add.indicator(strat,
     name = ".end_indicator",
@@ -459,4 +469,20 @@ buy_and_hold <- function(fees = 0) {
   )
 
   strat
+}
+
+
+#' Aplica los indicadores y señales al mktdata
+#'
+#' @param strategy objecto strategy
+#' @param mktdata xts con datos OHLC
+#'
+#' @return xts con las columnas adicionales de indicadores y señales
+#' @export
+#'
+#' @examples
+apply_indicator_signals <- function(strategy, mktdata) {
+  indicators <- quantstrat::applyIndicators(strategy = strategy, mktdata = mktdata)
+  signals <- quantstrat::applySignals(strategy = strategy, mktdata = indicators)
+  signals
 }

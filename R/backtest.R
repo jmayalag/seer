@@ -78,10 +78,10 @@ checkBlotterUpdate <- function(port.st = portofolio.name,
 backtest.opt <- function(strategy, symbols, geometric = FALSE, initial_equity = 10000, silent = FALSE) {
   FinancialInstrument::currency("USD")
   Sys.setenv(TZ = "UTC")
-  
+  rm(list=ls(envir = .blotter), envir = .blotter)
+  rm(list=ls(envir = .strategy), envir = .strategy)
   portfolio.st <- "Portfolio"
   account.st <- "Account"
-  
   quantstrat::rm.strat(portfolio.st)
   quantstrat::rm.strat(account.st)
   

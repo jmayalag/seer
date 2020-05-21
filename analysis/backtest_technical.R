@@ -44,18 +44,19 @@ triplecross_grid <- expand_grid(
   nFast = 1:10,
   nMedium = 5:15,
   nSlow = 10:25
-) %>% filter(nFast < nMedium && nMedium < nSlow)
+) %>% filter(nFast < nMedium & nMedium < nSlow)
 
 for (dataset in datasets) {
   message(dataset)
   x <- read_dataset(dataset, datadir = dataset_dir)
-  assign(dataset, x, envir = .GlobalEnv)
+  dataset.safe <- stringr::str_replace(dataset, "[^a-zA-z0-9_.]", "_")
+  assign(dataset.safe, x, envir = .GlobalEnv)
 
   macd_grid %>%
     mutate(file_prefix = glue("macd_f{nFast}_s{nSlow}_d{dataset}")) %>%
     rowwise() %>%
     do(test = run_backtest(
-      dataset,
+      dataset.safe,
       macdhist(fastMA = .$nFast, slowMA = .$nSlow),
       .$file_prefix,
       save_dir = file.path(out_dir, "macd")
@@ -65,10 +66,10 @@ for (dataset in datasets) {
     mutate(file_prefix = glue("triplecross_f{nFast}_m{nMedium}_s{nSlow}_d{dataset}")) %>%
     rowwise() %>%
     do(test = run_backtest(
-      dataset,
+      dataset.safe,
       triple_crossover(nFast = .$nFast, nMedium = .$nMedium, nSlow = .$nSlow),
       .$file_prefix,
       save_dir = file.path(out_dir, "triplecross")
     ))
-  rm(list = dataset)
+  rm(list = dataset.safe)
 }

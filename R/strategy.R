@@ -1,3 +1,56 @@
+#' Retorna una lista con argumentos por defecto
+#'
+#' @param order_size numero o "all"
+#' @param fees
+#' @param ... argumentos adicionales de ruleSignal. Reemplaza a los defaults
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' default_rule_arguments(100, 0, orderside = "long")
+default_rule_arguments <- function(order_size, fees, ...) {
+  defaults <- list(
+    orderqty = order_size,
+    ordertype = "market",
+    prefer = "Open", # Utiliza el precio de apertura para la compra
+    TxnFees = fees
+  )
+  args <- list(...)
+  modifyList(defaults, args)
+}
+
+#' Agrega una regla de salida del mercado
+#'
+#' @param strategy el objeto strategy
+#' @param fees
+#' @param sigCol nombre del signal de salida
+#' @param label nombre a utilizar para la regla
+#' @param orderside tipo de operacion (long | short)
+#'
+#' @return la estrategia con esta regla agregada
+#'
+#' @export
+#' @importFrom quantstrat strategy add.indicator add.rule add.signal ruleSignal
+add_exit_rule <- function(strategy, fees, sigcol = "exitLong", label = paste0("rule_", sigcol), orderside = "long") {
+  add.rule(
+    strategy = strategy,
+    name = "ruleSignal",
+    arguments = default_rule_arguments(
+      order_size = "all",
+      fees = fees,
+      sigcol = sigcol,
+      sigval = TRUE,
+      orderside = orderside,
+      ordertype = "market",
+      replace = TRUE
+    ),
+    type = "exit",
+    label = label
+  )
+}
+
+
 #' Triple Crossover Strategy
 #' Consiste en tener tres MAs de diferentes velocidades
 #' - Fast MA
@@ -59,7 +112,7 @@ triple_crossover <- function(nFast = 10, nMedium = 25, nSlow = 50, fees = 0) {
       formula = "(EMA.nFast > EMA.nMedium) & (EMA.nFast > EMA.nSlow)",
       cross = TRUE
     ),
-    label = "long"
+    label = "enterLong"
   )
 
   strat <- add.signal(
@@ -69,7 +122,7 @@ triple_crossover <- function(nFast = 10, nMedium = 25, nSlow = 50, fees = 0) {
       formula = "(EMA.nFast < EMA.nMedium) & (EMA.nFast < EMA.nSlow)",
       cross = TRUE
     ),
-    label = "short"
+    label = "enterShort"
   )
 
   strat <- add.signal(
@@ -98,34 +151,24 @@ triple_crossover <- function(nFast = 10, nMedium = 25, nSlow = 50, fees = 0) {
   strat <- add.rule(
     strategy = strat,
     name = "ruleSignal",
-    arguments = list(
-      sigcol = "long",
+    arguments = default_rule_arguments(
+      order_size = order_size,
+      fees = fees,
+      sigcol = "enterLong",
       sigval = TRUE,
-      orderqty = order_size,
-      ordertype = "market",
       orderside = "long",
       prefer = "Open",
-      TxnFees = fees,
       replace = FALSE
     ),
     type = "enter",
-    label = "EnterLONG"
+    label = "rule_enterLong"
   )
 
-  strat <- add.rule(
+  strat <- add_exit_rule(
     strategy = strat,
-    name = "ruleSignal",
-    arguments = list(
-      sigcol = "exitLong",
-      sigval = TRUE,
-      orderside = "long",
-      ordertype = "market",
-      orderqty = "all",
-      TxnFees = fees,
-      replace = TRUE
-    ),
-    type = "exit",
-    label = "Exit2"
+    fees = fees,
+    sigcol = "enterLong",
+    label = "rule_enterLong"
   )
 
   if (getOption("sell_at_end", TRUE)) {
@@ -150,7 +193,6 @@ triple_crossover <- function(nFast = 10, nMedium = 25, nSlow = 50, fees = 0) {
 macd <- function(fastMA = 12, slowMA = 26, fees = 0) {
   # Order params
   order_size <- 100
-  trx_fee <- 10
 
   strat <- strategy(paste("macd", fastMA, slowMA, sep = "_"))
 
@@ -166,6 +208,7 @@ macd <- function(fastMA = 12, slowMA = 26, fees = 0) {
   )
 
   ### Signals
+  # Signal > 0
   strat <- add.signal(strat,
     name = "sigThreshold",
     arguments = list(
@@ -174,7 +217,7 @@ macd <- function(fastMA = 12, slowMA = 26, fees = 0) {
       threshold = 0,
       cross = TRUE
     ),
-    label = "signal.gt.zero"
+    label = "enterLong"
   )
 
   strat <- add.signal(strat,
@@ -185,7 +228,7 @@ macd <- function(fastMA = 12, slowMA = 26, fees = 0) {
       threshold = 0,
       cross = TRUE
     ),
-    label = "signal.lt.zero"
+    label = "exitLong"
   )
 
 
@@ -194,35 +237,19 @@ macd <- function(fastMA = 12, slowMA = 26, fees = 0) {
   # shares comprar
   strat <- add.rule(strat,
     name = "ruleSignal",
-    arguments = list(
-      sigcol = "signal.gt.zero",
+    arguments = default_rule_arguments(
+      order_size = order_size,
+      fees = fees,
+      sigcol = "enterLong",
       sigval = TRUE,
-      orderqty = 100,
       ordertype = "market",
-      orderside = "long",
-      threshold = NULL,
-      TxnFees = fees
+      orderside = "long"
     ),
     type = "enter",
-    label = "enter",
-    storefun = FALSE
+    label = "rule_enterLong"
   )
 
-  strat <- add.rule(strat,
-    name = "ruleSignal",
-    arguments = list(
-      sigcol = "signal.lt.zero",
-      sigval = TRUE,
-      orderqty = "all",
-      ordertype = "market",
-      orderside = "long",
-      threshold = NULL,
-      orderset = "exit2",
-      TxnFees = fees
-    ),
-    type = "exit",
-    label = "exit"
-  )
+  strat <- add_exit_rule(strategy = strat, fees = fees, sigcol = "exitLong", label = "rule_exitLong")
 
   if (getOption("sell_at_end", TRUE)) {
     .sell_at_end(strat, fees = fees)
@@ -246,7 +273,6 @@ macd <- function(fastMA = 12, slowMA = 26, fees = 0) {
 macdhist <- function(fastMA = 12, slowMA = 26, fees = 0) {
   # Order params
   order_size <- 100
-  trx_fee <- 10
 
   strat <- strategy(paste("macdhist", fastMA, slowMA, sep = "_"))
 
@@ -262,22 +288,24 @@ macdhist <- function(fastMA = 12, slowMA = 26, fees = 0) {
   )
 
   ### Signals
+  # hist.gt.zero
   strat <- add.signal(strat,
     name = "sigCrossover",
     arguments = list(
       columns = c("macd._", "signal._"),
       relationship = "gt"
     ),
-    label = "hist.gt.zero"
+    label = "enterLong"
   )
 
+  # hist.lte.zero
   strat <- add.signal(strat,
     name = "sigCrossover",
     arguments = list(
       columns = c("macd._", "signal._"),
       relationship = "lte"
     ),
-    label = "hist.lte.zero"
+    label = "exitLong"
   )
 
 
@@ -286,34 +314,19 @@ macdhist <- function(fastMA = 12, slowMA = 26, fees = 0) {
   # shares comprar
   strat <- add.rule(strat,
     name = "ruleSignal",
-    arguments = list(
-      sigcol = "hist.gt.zero",
+    arguments = default_rule_arguments(
+      order_size = order_size,
+      fees = fees,
+      sigcol = "enterLong",
       sigval = TRUE,
-      orderqty = 100,
       ordertype = "market",
-      orderside = "long",
-      threshold = NULL,
-      TxnFees = fees
+      orderside = "long"
     ),
     type = "enter",
-    label = "enter"
+    label = "rule_enterLong"
   )
 
-  strat <- add.rule(strat,
-    name = "ruleSignal",
-    arguments = list(
-      sigcol = "hist.lte.zero",
-      sigval = TRUE,
-      orderqty = "all",
-      ordertype = "market",
-      orderside = "long",
-      threshold = NULL,
-      orderset = "exit2",
-      TxnFees = fees
-    ),
-    type = "exit",
-    label = "exit"
-  )
+  strat <- add_exit_rule(strategy = strat, fees = fees, sigcol = "exitLong", label = "rule_exitLong")
 
   if (getOption("sell_at_end", TRUE)) {
     .sell_at_end(strat, fees = fees)
@@ -405,7 +418,7 @@ buy_and_hold <- function(fees = 0) {
       TxnFees = fees
     ),
     type = "enter",
-    label = "enter",
+    label = "rule_enterLong",
     storefun = FALSE
   )
 
@@ -413,6 +426,14 @@ buy_and_hold <- function(fees = 0) {
 }
 
 
+#' Cierra las ordenes pendientes al final del backtest
+#'
+#' @param strat objeto strategy
+#' @param fees 
+#'
+#' @return
+#' @export
+#' @importFrom quantstrat add.indicator add.signal add.rule ruleSignal sigThreshold
 .sell_at_end <- function(strat, fees) {
   strat <- add.indicator(strat,
     name = ".end_indicator",
@@ -434,18 +455,34 @@ buy_and_hold <- function(fees = 0) {
 
   strat <- add.rule(strat,
     name = "ruleSignal",
-    arguments = list(
+    arguments = default_rule_arguments(
+      order_size = "all",
+      fees = fees,
       sigcol = "sig_sell_end",
       sigval = 1,
       orderside = "long",
       ordertype = "market",
-      orderqty = "all",
-      TxnFees = fees,
       replace = TRUE
     ),
     type = "exit",
-    label = "exit_end"
+    label = "rule_exitEnd"
   )
 
   strat
+}
+
+
+#' Aplica los indicadores y señales al mktdata
+#'
+#' @param strategy objecto strategy
+#' @param mktdata xts con datos OHLC
+#'
+#' @return xts con las columnas adicionales de indicadores y señales
+#' @export
+#'
+#' @examples
+apply_indicator_signals <- function(strategy, mktdata) {
+  indicators <- quantstrat::applyIndicators(strategy = strategy, mktdata = mktdata)
+  signals <- quantstrat::applySignals(strategy = strategy, mktdata = indicators)
+  signals
 }

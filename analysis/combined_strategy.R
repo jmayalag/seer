@@ -4,31 +4,6 @@ library(dplyr)
 library(seer)
 library(quantstrat)
 
-
-semiconservative_signals <- function(strat) {
-  strat <- add.signal(
-    strategy = strat,
-    name = "sigFormula",
-    arguments = list(
-      formula = "enterLong | (enterLong & pred_bull)",
-      cross = TRUE
-    ),
-    label = "enterLongPred"
-  )
-  
-  strat <- add.signal(
-    strategy = strat,
-    name = "sigFormula",
-    arguments = list(
-      formula = "exitLong | pred_bear",
-      cross = TRUE
-    ),
-    label = "exitLongPred"
-  )
-  
-  strat
-}
-
 conservative_signals <- function(strat) {
   strat <- add.signal(
     strategy = strat,
@@ -164,9 +139,6 @@ mkt$pred_bear <- if_else(mkt$pred_bear == 1, 1, 0)
 
 ES35_D1 <- mkt
 
-strat <- ml_strat(base_strategy$name, approach = "semiconservative")
-result_semiconservative <- backtest.opt(strat, "ES35_D1")
-
 strat <- ml_strat(base_strategy$name, approach = "conservative")
 result_conservative <- backtest.opt(strat, "ES35_D1")
 
@@ -183,3 +155,12 @@ stats <- list(result_semiconservative, result_conservative, result_risky, result
   as_tibble()
 
 stats %>% select(strategy, Symbol, Num.Txns, Num.Trades, Net.Trading.PL, Avg.Trade.PL, Gross.Profits, Gross.Losses, Max.Drawdown)
+
+tb <- xts_to_df(x_pred) %>%
+  as_tibble() %>%
+  mutate(pred_bull_ind = as.numeric(pred > Close), pred_bear_ind = as.numeric(pred < Close)) %>%
+  mutate(pred_bull = pred_bull_ind - replace_na(lag(pred_bull_ind), 0)) %>%
+  mutate(pred_bear = pred_bear_ind - replace_na(lag(pred_bear_ind), 0)) %>%
+  mutate(pred_bull = if_else(pred_bull == 1, 1, 0), pred_bear = if_else(pred_bear == 1, 1, 0))
+
+tb

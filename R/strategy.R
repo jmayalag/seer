@@ -61,6 +61,7 @@ add_exit_rule <- function(strategy, fees, sigcol = "exitLong", label = paste0("r
 #' @param nMedium EMA Medio
 #' @param nSlow EMA Lento
 #' @param fees costo numerico o funcion de costo
+#' @param order_size cantidad a comprar
 #'
 #' @return un objeto Strategy
 #' @export
@@ -68,7 +69,7 @@ add_exit_rule <- function(strategy, fees, sigcol = "exitLong", label = paste0("r
 #'
 #' @examples
 #' strat <- triple_crossover()
-triple_crossover <- function(nFast = 10, nMedium = 25, nSlow = 50, fees = 0) {
+triple_crossover <- function(nFast = 10, nMedium = 25, nSlow = 50, fees = 0, order_size = 1) {
   if (nFast >= nMedium) {
     stop("nFast debe ser menor que nMedium")
   }
@@ -78,7 +79,6 @@ triple_crossover <- function(nFast = 10, nMedium = 25, nSlow = 50, fees = 0) {
   }
 
   # Order params
-  order_size <- 100
 
   strat <- strategy(paste("triple_crossover", nFast, nMedium, nSlow, sep = "_"))
 
@@ -190,10 +190,7 @@ triple_crossover <- function(nFast = 10, nMedium = 25, nSlow = 50, fees = 0) {
 #'
 #' @examples
 #' strat <- macd()
-macd <- function(fastMA = 12, slowMA = 26, fees = 0) {
-  # Order params
-  order_size <- 100
-
+macd <- function(fastMA = 12, slowMA = 26, fees = 0, order_size = 1) {
   strat <- strategy(paste("macd", fastMA, slowMA, sep = "_"))
 
   # Agrega indicadores
@@ -263,6 +260,7 @@ macd <- function(fastMA = 12, slowMA = 26, fees = 0) {
 #' @param fastMA periodos del fast MA
 #' @param slowMA periodos del slow MA
 #' @param fees costo numerico o funcion de costo
+#' @param order_size cantidad a comprar
 #'
 #' @return un objeto Strategy
 #' @export
@@ -270,10 +268,7 @@ macd <- function(fastMA = 12, slowMA = 26, fees = 0) {
 #'
 #' @examples
 #' strat <- macdhist()
-macdhist <- function(fastMA = 12, slowMA = 26, fees = 0) {
-  # Order params
-  order_size <- 100
-
+macdhist <- function(fastMA = 12, slowMA = 26, fees = 0, order_size = 1) {
   strat <- strategy(paste("macdhist", fastMA, slowMA, sep = "_"))
 
   # Agrega indicadores
@@ -369,6 +364,9 @@ macdhist <- function(fastMA = 12, slowMA = 26, fees = 0) {
 }
 
 #' Buy and Hold strategy
+#' @param fees
+#' @param order_size
+#' 
 #'
 #' @return un objeto Strategy
 #' @export
@@ -376,11 +374,7 @@ macdhist <- function(fastMA = 12, slowMA = 26, fees = 0) {
 #'
 #' @examples
 #' strat <- buy_and_hold()
-buy_and_hold <- function(fees = 0) {
-  # Order params
-  order_size <- 100
-  trx_fee <- 10
-
+buy_and_hold <- function(fees = 0, order_size = 100) {
   strat <- strategy("buy_and_hold")
 
   # Agrega indicadores

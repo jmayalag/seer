@@ -4,7 +4,7 @@
 \alias{macdhist}
 \title{MACD hist Strategy}
 \usage{
-macdhist(fastMA = 12, slowMA = 26, fees = 0)
+macdhist(fastMA = 12, slowMA = 26, fees = 0, order_size = 1)
 }
 \arguments{
 \item{fastMA}{periodos del fast MA}
@@ -12,6 +12,8 @@ macdhist(fastMA = 12, slowMA = 26, fees = 0)
 \item{slowMA}{periodos del slow MA}
 
 \item{fees}{costo numerico o funcion de costo}
+
+\item{order_size}{cantidad a comprar}
 }
 \value{
 un objeto Strategy

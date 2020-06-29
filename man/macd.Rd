@@ -4,7 +4,7 @@
 \alias{macd}
 \title{MACD Strategy}
 \usage{
-macd(fastMA = 12, slowMA = 26, fees = 0)
+macd(fastMA = 12, slowMA = 26, fees = 0, order_size = 1)
 }
 \arguments{
 \item{fastMA}{periodos del fast MA}

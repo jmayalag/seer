@@ -8,7 +8,13 @@ Consiste en tener tres MAs de diferentes velocidades
 - Medium MA
 - Slow MA}
 \usage{
-triple_crossover(nFast = 10, nMedium = 25, nSlow = 50, fees = 0)
+triple_crossover(
+  nFast = 10,
+  nMedium = 25,
+  nSlow = 50,
+  fees = 0,
+  order_size = 1
+)
 }
 \arguments{
 \item{nFast}{EMA Rapido}
@@ -18,6 +24,8 @@ triple_crossover(nFast = 10, nMedium = 25, nSlow = 50, fees = 0)
 \item{nSlow}{EMA Lento}
 
 \item{fees}{costo numerico o funcion de costo}
+
+\item{order_size}{cantidad a comprar}
 }
 \value{
 un objeto Strategy

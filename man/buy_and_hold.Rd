@@ -4,7 +4,10 @@
 \alias{buy_and_hold}
 \title{Buy and Hold strategy}
 \usage{
-buy_and_hold(fees = 0)
+buy_and_hold(fees = 0, order_size = 100)
+}
+\arguments{
+\item{order_size}{}
 }
 \value{
 un objeto Strategy

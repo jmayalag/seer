@@ -29,7 +29,7 @@ predict_xts <- function(model, x, h, w, overlap = TRUE) {
 #' @examples
 parse_params <- function(model_path) {
   model_name <- basename(model_path)
-  params <- stringr::str_match(model_name, "h([:digit:]+)_w([:digit:]+)_d([[:alnum:]_]+)_(.*).rds")
+  params <- stringr::str_match(model_name, "h([:digit:]+)_w([:digit:]+)_d([[:alnum:]_]+)_(.*)")
   h <- as.numeric(params[[2]])
   w <- as.numeric(params[[3]])
   dataset <- params[[4]]

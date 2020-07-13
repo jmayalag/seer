@@ -34,8 +34,8 @@ time_series_prediction_format <- function(source,
   leads <- 1:max_horizon
 
   cols <- pred_col
-  lag_cols <- paste(cols, "lag", lags, sep = ".")
-  pred_cols <- paste(cols, "pred", leads, sep = ".")
+  lag_cols <- paste0("w", lags)
+  pred_cols <- paste0("h", leads)
 
   # Calcula n periodos anteriores
   data[, (lag_cols) := data.table::shift(.SD, lags), .SDcols = pred_col]

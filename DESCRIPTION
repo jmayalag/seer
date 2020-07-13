@@ -26,7 +26,8 @@ Imports:
     FinancialInstrument,
     blotter (>= 0.14.7),
     quantstrat (>= 0.16.2),
-    evtree
+    evtree,
+    scales
 Remotes: 
     jmayalag/OHLCMerge,
     braverock/blotter,
@@ -34,4 +35,5 @@ Remotes:
 RoxygenNote: 7.1.0
 Suggests: 
     highcharter (>= 0.7.0),
-    testthat (>= 2.1.0)
+    testthat (>= 2.1.0),
+    plotly

@@ -34,6 +34,8 @@ Los datasets especificados en `symbols` deben estar cargados en el entorno globa
 como workaround a las limitaciones de blotter/quantstrat.
 }
 \examples{
+\dontrun{
 data("ES35_D1")
 backtest.opt(macd(), "ES35_D1")
+}
 }

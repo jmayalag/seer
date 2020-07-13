@@ -6,16 +6,39 @@
 #' @param w
 #' @param overlap TRUE para permitir predecir en cada observacion
 #'
-#' @return objeto xst con la columna de prediccion
+#' @return objeto xts con las columnas de prediccion
 #' @export
 predict_xts <- function(model, x, h, w, overlap = TRUE) {
   # Allow NA in the prediction column
   pred_format <- time_series_prediction_format(x, max_horizon = h, max_window = w, overlap = overlap, discard = FALSE)
   pred_format <- pred_format[(w + 1):nrow(pred_format), ]
-
-  prediction <- as.numeric(predict(model, pred_format[,  1:w]))
+  pred_col <- sprintf("h%d", h)
+  
+  values <- predict(model, pred_format[,  1:w])
+  prediction <- as.numeric(values[, pred_col])
   pred <- xts(prediction, pred_format$index)
+  colnames(pred) <- pred_col
 
+  x_pred <- cbind(x, pred)
+}
+
+#' Realiza prediccion utilizando un modelo de ML con multiples salidas
+#'
+#' @param model modelo predictivo
+#' @param x objeto xts
+#' @param w
+#' @param overlap TRUE para permitir predecir en cada observacion
+#'
+#' @return objeto xts con las columnas de prediccion
+#' @export
+predict_xts_multiple <- function(model, x, h, w, overlap = TRUE) {
+  # Allow NA in the prediction column
+  pred_format <- time_series_prediction_format(x, max_horizon = h, max_window = w, overlap = overlap, discard = FALSE)
+  pred_format <- pred_format[(w + 1):nrow(pred_format), ]
+  
+  values <- predict(model, pred_format[,  1:w])
+  pred <- xts(values, order.by = pred_format$index)
+  
   x_pred <- cbind(x, pred)
 }
 

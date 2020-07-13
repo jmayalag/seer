@@ -14,7 +14,7 @@ recalc_stats(backtest_result, fees, quantity)
 \item{quantity}{cantidad de compra/venta}
 }
 \value{
-
+estadisticas recalculadas
 }
 \description{
 Recalcula estadisticas con los nuevos parametros de compra/venta

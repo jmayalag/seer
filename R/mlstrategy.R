@@ -92,3 +92,36 @@ ml_strat <- function(base_strategy, approach, fees = 0, order_size = 1) {
     strat
   }
 }
+
+
+#' Apply ML indicator and signals
+#'
+#' @param dataset the xts
+#' @param base_strategy base technical analysis strategy
+#' @param model the ML model
+#' @param h prediction horizon
+#' @param w historic window
+#'
+#' @return
+#' @export
+#' @importFrom dplyr if_else
+#' @importFrom tidyr replace_na
+ml_apply_indicator_signals <- function(dataset, base_strategy, model, h, w) {
+  mkt <- predict_xts(model, dataset, h = h, w = w)
+  pred_col <- sprintf("h%d", h)
+  
+  mkt <- apply_indicator_signals(base_strategy, mkt)
+  mkt$enterLong <- replace_na(mkt$enterLong, 0)
+  mkt$exitLong <- replace_na(mkt$exitLong, 0)
+  
+  mkt$pred_bull_ind <- mkt[, pred_col] > mkt$Close
+  mkt$pred_bear_ind <- mkt[, pred_col] < mkt$Close
+  
+  # Crossover signal, 1 only for the first observation in a row
+  mkt$pred_bull <- mkt$pred_bull_ind - replace_na(lag.xts(mkt$pred_bull_ind), 0)
+  mkt$pred_bull <- if_else(mkt$pred_bull == 1, 1, 0)
+  mkt$pred_bear <- mkt$pred_bear_ind - replace_na(lag.xts(mkt$pred_bear_ind), 0)
+  mkt$pred_bear <- if_else(mkt$pred_bear == 1, 1, 0)
+  
+  mkt
+}

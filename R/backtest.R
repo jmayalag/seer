@@ -16,38 +16,40 @@ checkBlotterUpdate <- function(port.st = portofolio.name,
   port.tot <- sum(
     sapply(
       syms,
-      FUN = function(x) eval(
-        parse(
-          text = paste("sum(p$symbols",
-                       x,
-                       "posPL.USD$Net.Trading.PL)",
-                       sep = "$"
+      FUN = function(x) {
+        eval(
+          parse(
+            text = paste("sum(p$symbols",
+              x,
+              "posPL.USD$Net.Trading.PL)",
+              sep = "$"
+            )
           )
         )
-      )
+      }
     )
   )
-  
+
   port.sum.tot <- sum(p$summary$Net.Trading.PL)
-  
+
   if (!isTRUE(all.equal(port.tot, port.sum.tot))) {
     ok <- FALSE
     if (verbose) print("portfolio P&L doesn't match sum of symbols P&L")
   }
-  
+
   initEq <- as.numeric(xts::first(a$summary$End.Eq))
   endEq <- as.numeric(xts::last(a$summary$End.Eq))
-  
+
   if (!isTRUE(all.equal(port.tot, endEq - initEq))) {
     ok <- FALSE
     if (verbose) print("portfolio P&L doesn't match account P&L")
   }
-  
+
   if (sum(duplicated(zoo::index(p$summary)))) {
     ok <- FALSE
     if (verbose) print("duplicate timestamps in portfolio summary")
   }
-  
+
   if (sum(duplicated(zoo::index(a$summary)))) {
     ok <- FALSE
     if (verbose) print("duplicate timestamps in account summary")
@@ -73,62 +75,70 @@ checkBlotterUpdate <- function(port.st = portofolio.name,
 #' como workaround a las limitaciones de blotter/quantstrat.
 #'
 #' @examples
+#' \dontrun{
 #' data("ES35_D1")
 #' backtest.opt(macd(), "ES35_D1")
+#' }
 backtest.opt <- function(strategy, symbols, geometric = FALSE, initial_equity = 10000, silent = FALSE) {
   FinancialInstrument::currency("USD")
   Sys.setenv(TZ = "UTC")
-  rm(list=ls(envir = .blotter), envir = .blotter)
-  rm(list=ls(envir = .strategy), envir = .strategy)
+  rm(list = ls(envir = .blotter), envir = .blotter)
+  rm(list = ls(envir = .strategy), envir = .strategy)
   portfolio.st <- "Portfolio"
   account.st <- "Account"
   quantstrat::rm.strat(portfolio.st)
   quantstrat::rm.strat(account.st)
-  
+
   # Equidad inicial de la cuenta
   init_equity <- initial_equity
   # Ajustar precios (dividends, stock splits, etc)
   adjustment <- TRUE
-  
+
   FinancialInstrument::stock(symbols, currency = "USD", multiplier = 1)
-  
+
   blotter::initPortf(
     name = portfolio.st,
     symbols = symbols
   )
-  
+
   blotter::initAcct(
     name = account.st,
     portfolios = portfolio.st,
     initEq = init_equity
   )
-  
+
   quantstrat::initOrders(
     portfolio = portfolio.st,
     symbols = symbols
   )
-  
+
   if (silent) {
     invisible(capture.output(quantstrat::applyStrategy(strategy = strategy, portfolios = portfolio.st)))
   } else {
     quantstrat::applyStrategy(strategy = strategy, portfolios = portfolio.st)
   }
-  
+
   blotter::updatePortf(portfolio.st)
   blotter::updateAcct(account.st)
   blotter::updateEndEq(account.st)
-  
+
   if (!checkBlotterUpdate(portfolio.st, account.st)) {
     print("Existen diferencias entre cuenta y portfolio.")
   }
-  
+
   results <- list()
-  
+
   results$txns <- blotter::getTxns(portfolio.st, Symbol = symbols[1])
   results$stats <- blotter::tradeStats(portfolio.st)
+  if (nrow(results$stats) == 0) {
+    results$stats <- results$stats %>%
+      dplyr::add_row() %>%
+      dplyr::mutate(dplyr::across(tidyr::everything(), ~0)) %>%
+      dplyr::mutate(Portfolio = portfolio.st, Symbol = symbols)
+  }
   results$stats$strategy <- strategy$name
   results$stats$investment <- init_equity
-  
+
   p <- blotter::getPortfolio(portfolio.st)
   results$returns <- blotter::PortfReturns(account.st)
   results$drawdowns <- PerformanceAnalytics::Drawdowns(results$returns)
@@ -137,7 +147,7 @@ backtest.opt <- function(strategy, symbols, geometric = FALSE, initial_equity = 
   } else {
     results$cumreturns <- cumsum(results$returns)
   }
-  
+
   results
 }
 
@@ -148,18 +158,19 @@ backtest.opt <- function(strategy, symbols, geometric = FALSE, initial_equity = 
 #'
 #' @return data.frame con las estadisticas
 #' @export
+#' @importFrom dplyr mutate across na_if summarise as_tibble select
 trade_stats <- function(trades) {
   sd.err <- function(x) {
     sd(x) / sqrt(length(x))
   }
-  
+
   # Daily stats
   DailyPL <- xts::apply.daily(trades$Net.Txn.Realized.PL[trades$Net.Txn.Realized.PL != 0], sum)
   AvgDailyPL <- mean(DailyPL)
   MedDailyPL <- median(DailyPL)
   StdDailyPL <- sd(as.numeric(as.vector(DailyPL)))
   StdErrDailyPL <- sd.err(as.numeric(as.vector(DailyPL)))
-  
+
   df <- xts_to_df(trades) %>%
     as_tibble() %>%
     mutate(is.enter = Txn.Qty > 0, is.exit = Txn.Qty < 0) %>%
@@ -168,7 +179,7 @@ trade_stats <- function(trades) {
       equity = cumsum(Net.Txn.Realized.PL),
       drawdown = cummax(equity) - equity,
     )
-  
+
   stats <- df %>%
     summarise(
       Num.Txns = sum(is.exit) + sum(is.enter),
@@ -205,8 +216,8 @@ trade_stats <- function(trades) {
       End.Equity = last(equity),
     ) %>%
     select(-c(Wins, Losses))
-  
-  stats %>% 
+
+  stats %>%
     mutate(across(where(is.numeric), ~ na_if(na_if(na_if(.x, NaN), Inf), -Inf))) %>% # replace any inf values with NA
     as.data.frame()
 }
@@ -214,26 +225,33 @@ trade_stats <- function(trades) {
 #' Recalcula estadisticas sin analizar trades.
 #' Obs. Solo recalcula un subconjunto de estadisticas
 #'
-#' @param backtest_result 
-#' @param fees 
-#' @param quantity 
+#' @param backtest_result
+#' @param fees
+#' @param quantity
 #'
 #' @return
 #' @export
+#' @importFrom dplyr mutate across select
 fast_recalc_stats <- function(backtest_result, fees, quantity) {
   prev.qty <- dplyr::coalesce(abs(as.numeric(backtest_result$txns$Txn.Qty)[2]), 100) # Baseline qty
-  
+
   backtest_result$stats %>%
     select(-c(Ann.Sharpe, ends_with("Daily.PL"), Profit.Factor, Gross.Profits, Gross.Losses, Percent.Positive, Percent.Negative)) %>% # Can't fast recalc
     mutate(across(
-      c(Net.Trading.PL, Avg.Trade.PL, Med.Trade.PL, Largest.Winner, Largest.Loser, Std.Dev.Trade.PL, Std.Err.Trade.PL,
-        Avg.Win.Trade, Med.Win.Trade, Avg.Losing.Trade, Med.Losing.Trade, Max.Equity, Min.Equity, End.Equity),
+      c(
+        Net.Trading.PL, Avg.Trade.PL, Med.Trade.PL, Largest.Winner, Largest.Loser, Std.Dev.Trade.PL, Std.Err.Trade.PL,
+        Avg.Win.Trade, Med.Win.Trade, Avg.Losing.Trade, Med.Losing.Trade, Max.Equity, Min.Equity, End.Equity
+      ),
       ~ .x / prev.qty
     )) %>%
     mutate(Net.Trading.PL = Net.Trading.PL + fees * quantity * Num.Trades) %>%
-    mutate(across(c(Avg.Trade.PL, Med.Trade.PL, Largest.Winner, Largest.Loser,
-                    Avg.Win.Trade, Med.Win.Trade, Avg.Losing.Trade, Med.Losing.Trade, Max.Equity, Min.Equity, End.Equity),
-                  ~.x * quantity + fees))
+    mutate(across(
+      c(
+        Avg.Trade.PL, Med.Trade.PL, Largest.Winner, Largest.Loser,
+        Avg.Win.Trade, Med.Win.Trade, Avg.Losing.Trade, Med.Losing.Trade, Max.Equity, Min.Equity, End.Equity
+      ),
+      ~ .x * quantity + fees
+    ))
 }
 
 
@@ -243,10 +261,8 @@ fast_recalc_stats <- function(backtest_result, fees, quantity) {
 #' @param fees costo de transaccion
 #' @param quantity cantidad de compra/venta
 #'
-#' @return
+#' @return estadisticas recalculadas
 #' @export
-#'
-#' @examples
 recalc_stats <- function(backtest_result, fees, quantity) {
   trades <- recalc_trades(backtest_result$txn, fees, quantity)
   new_stats <- trade_stats(trades)
@@ -270,16 +286,16 @@ recalc_trades <- function(trades, fees = 0, qty = 1) {
   is.exit <- trades$Txn.Qty < 0
   prev.qty <- dplyr::coalesce(abs(as.numeric(trades$Txn.Qty)[2]), 100) # Baseline qty
   trades$Txn.Qty <- (trades$Txn.Qty / prev.qty) * qty
-  
+
   trades[is.exit, ]$Txn.Fees <- -abs(fees)
-  
+
   trades$Txn.Value <- trades$Txn.Price * trades$Txn.Qty
   trades$Txn.Avg.Cost <- ifelse(trades$Txn.Qty == 0, 0, trades$Txn.Value / trades$Txn.Qty)
-  
+
   prev <- lag.xts(trades)
-  
+
   trades$Net.Txn.Realized.PL <- -(trades$Txn.Value + prev$Txn.Value - trades$Txn.Fees)
   trades[!is.exit, ]$Net.Txn.Realized.PL <- 0
-  
+
   trades
 }

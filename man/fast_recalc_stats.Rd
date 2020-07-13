@@ -8,10 +8,6 @@ Obs. Solo recalcula un subconjunto de estadisticas}
 fast_recalc_stats(backtest_result, fees, quantity)
 }
 \arguments{
-\item{backtest_result}{}
-
-\item{fees}{}
-
 \item{quantity}{}
 }
 \value{

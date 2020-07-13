@@ -167,8 +167,8 @@ triple_crossover <- function(nFast = 10, nMedium = 25, nSlow = 50, fees = 0, ord
   strat <- add_exit_rule(
     strategy = strat,
     fees = fees,
-    sigcol = "enterLong",
-    label = "rule_enterLong"
+    sigcol = "exitLong",
+    label = "rule_exitLong"
   )
 
   if (getOption("sell_at_end", TRUE)) {

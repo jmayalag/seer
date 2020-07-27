@@ -15,32 +15,37 @@ crossover <- function(x) {
   cross
 }
 
-triple_ema <- function(x, nFast, nMedium, nSlow) {
+triple_ema <- function(nFast, nMedium, nSlow) {
   require(TTR)
-  x$fast <- EMA(x$Close, n = nFast)
-  x$medium <- EMA(x$Close, n = nMedium)
-  x$slow <- EMA(x$Close, n = nSlow)
-
-  x$enterLong <- crossover((x$fast > x$medium) & (x$medium > x$slow))
-  x$exitLong <- crossover((x$fast <= x$medium) & (x$fast <= x$slow))
-
-  x$buy <- replace_na(x$enterLong == 1, 0)
-  x$sell <- replace_na(x$exitLong == 1, 0)
+  
+  strategy_fun <- function(x) {
+    x$fast <- EMA(x$Close, n = nFast)
+    x$medium <- EMA(x$Close, n = nMedium)
+    x$slow <- EMA(x$Close, n = nSlow)
+    
+    x$enterLong <- crossover((x$fast > x$medium) & (x$medium > x$slow))
+    x$exitLong <- crossover((x$fast <= x$medium) & (x$fast <= x$slow))
+    
+    x$buy <- replace_na(x$enterLong == 1, 0)
+    x$sell <- replace_na(x$exitLong == 1, 0)
+    x
+  }
 
   name <- sprintf("tema_%d_%d_%d", nFast, nMedium, nSlow)
 
   strategy <- list(
     name = name,
-    strategy = x,
-    params = c(nFast, nMedium, nSlow)
+    params = c(nFast, nMedium, nSlow),
+    strategy = strategy_fun
   )
 }
 
-backtest <- function(strat, cost, qty, price_fun = quantmod::Op, sell_at_end = F) {
+backtest <- function(data, strat, cost, qty, sell_at_end = F, price_fun = quantmod::Op, debug = F) {
   require(xts)
   message(paste0("Backtest ", strat$name, "\n"))
-  backtest <- strat$strategy[, c("buy", "sell")]
-  backtest$order_price <- price_fun(strat$strategy) # sell and buy price
+  x <- strat$strategy(data)
+  backtest <- x[, c("buy", "sell")]
+  backtest$order_price <- price_fun(x) # sell and buy price
 
   # Order is executed the next day
   backtest$order_buy <- xts::lag.xts(backtest$buy)
@@ -49,7 +54,7 @@ backtest <- function(strat, cost, qty, price_fun = quantmod::Op, sell_at_end = F
     backtest$order_sell[nrow(backtest)] <- 1
   }
 
-  backtest <- backtest[backtest$order_buy | backtest$order_sell | index(backtest) == end(backtest)]
+  backtest <- backtest[backtest$order_buy | backtest$order_sell]
 
   backtest$position <- backtest$order_buy - backtest$order_sell
 
@@ -67,28 +72,44 @@ backtest <- function(strat, cost, qty, price_fun = quantmod::Op, sell_at_end = F
     c("position_eff", "position_cum", "order_value", "order_qty", "order_cost")
   ]
 
-  trades$pips <- -(trades$order_value + lag.xts(trades$order_value))
-  trades$pips[trades$order_qty >= 0] <- 0
-  trades$pips_eff <- trades$pips - trades$order_cost
-  trades$equity <- cumsum(trades$pips_eff)
+  trades$delta <- -(trades$order_value + lag.xts(trades$order_value))
+  trades$delta[trades$order_qty >= 0] <- 0
+  trades$pips <- trades$delta - trades$order_cost
+  trades$equity <- cumsum(trades$pips)
   trades$drawdown <- cummax(trades$equity) - trades$equity
+  
+  if (debug) {
+    list(data = x, backtest = backtest, trades = trades)
+  } else {
+    list(trades = trades)
+  }
+}
 
-  trades
+run_backtest <- function(symbol, data, strat, cost=0, qty=1, ...) {
+  result <- backtest(data=data, strat=strat, cost=cost, qty = qty, ...)
+  result$stats <- backtest_stats(result$trades)
+  
+  result$stats$symbol <- symbol
+  result$stats$strategy <- strat$name
+  result$stats$cost <- cost
+  result$stats$order_size <- qty
+  
+  result
 }
 
 backtest_stats <- function(result) {
   net_profit <- as.numeric(last(result)$equity)
-  avg_profit_per_trade <- mean(result$pips_eff[result$pips_eff != 0])
-  avg_winning_trade <- mean(result$pips_eff[result$pips_eff > 0])
-  avg_losing_trade <- mean(result$pips_eff[result$pips_eff < 0])
+  avg_profit_per_trade <- mean(result$pips[result$pips != 0])
+  avg_winning_trade <- mean(result$pips[result$pips > 0])
+  avg_losing_trade <- mean(result$pips[result$pips < 0])
 
   num_txns <- sum(result$position_eff != 0)
   num_trades <- sum(result$position_eff == -1)
-  gross_profits <- sum(result$pips_eff[result$pips_eff > 0])
-  gross_losses <- sum(result$pips_eff[result$pips_eff < 0])
+  gross_profits <- sum(result$pips[result$pips > 0])
+  gross_losses <- sum(result$pips[result$pips < 0])
   profit_factor <- abs(gross_profits / gross_losses)
-  wins <- sum(result$pips_eff > 0)
-  losses <- sum(result$pips_eff < 0)
+  wins <- sum(result$pips > 0)
+  losses <- sum(result$pips < 0)
   max_drawdown <- -max(result$drawdown)
 
   data.frame(
@@ -117,18 +138,26 @@ qty <- 1
 cost <- 2
 sell_at_end <- T
 
-# strategies <- tema_grid %>%
-#   mutate(strategy = pmap(list(nFast, nMedium, nSlow), ~ triple_ema(data, ..1, ..2, ..3)))
-#
+strategies <- tema_grid %>%
+  mutate(strategy = pmap(list(nFast, nMedium, nSlow), ~ triple_ema(..1, ..2, ..3))) %>%
+  mutate(name = map_chr(strategy, 'name'))
+
 # results <- strategies %>%
-#   mutate(result = map(strategy, ~ run_backtest(strat = .x, cost = cost, qty = qty, sell_at_end = T)))
+#   mutate(result = map(strategy, ~ backtest(data = data, strat = .x, cost = cost, qty = qty, sell_at_end = T)))
+# 
+# stats <- results %>%
+#   mutate(map_df(result, backtest_stats))
+# 
+# stats %>%
+#   select(-c(strategy, result))
+  
+
+# View(stats)
 
 # results <- strategies %>%
 #   do(backtest = list(run_backtest(strat = .$strategy[[1]], cost = cost, qty = qty, sell_at_end = T)))
 
-strat <- triple_ema(data, 1, 18, 72)
+tema <- triple_ema(1, 18, 72)
 
-result <- run_backtest(strat, cost, qty, sell_at_end = T)
-# run_backtest(strat, cost, qty, sell_at_end = F)
+result <- run_backtest("DAX", data, tema, cost=cost, qty=qty, sell_at_end = T, debug = T)
 
-backtest_stats(result)

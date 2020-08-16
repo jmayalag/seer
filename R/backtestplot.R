@@ -5,11 +5,10 @@
 #' @param backtest_results backtest results from backtest.opt
 #'
 #' @return a ggplot
-#' @export
 #' @importFrom tidyr pivot_longer
 #' @importFrom dplyr mutate select across `%>%` if_else case_when filter
 #' @import ggplot2
-plot_backtest <- function(strategy, dataset, backtest_results, range = "") {
+old.plot_backtest <- function(strategy, dataset, backtest_results, range = "") {
   strat_name <- backtest_results$stats$strategy
   symbol <- backtest_results$stats$Symbol
   
@@ -72,8 +71,7 @@ plot_backtest <- function(strategy, dataset, backtest_results, range = "") {
 #' @param order_size order volume
 #'
 #' @return strategy object
-#' @export
-recreate_strategy <- function(backtest_results, fees = 0, order_size = 1) {
+old.recreate_strategy <- function(backtest_results, fees = 0, order_size = 1) {
   strat_name <- backtest_results$stats$strategy
   params <- as.numeric(stringr::str_extract_all(strat_name, "\\d+", simplify = T))
   
@@ -91,8 +89,7 @@ recreate_strategy <- function(backtest_results, fees = 0, order_size = 1) {
 #' @param ... arguments for plot_backtest
 #'
 #' @return plotly plot object
-#' @export
-plot_backtest_interactive <- function(...) {
+old.plot_backtest_interactive <- function(...) {
   plot <- seer::plot_backtest(...)
   plotly::ggplotly(plot)
 }

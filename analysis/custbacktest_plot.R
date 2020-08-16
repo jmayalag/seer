@@ -1,31 +1,36 @@
-plot_backtest <- function(result, range = "") {
+plot_backtest <- function(result, range = "", additional_indicators) {
   require(ggplot2)
-  df <- result$data[range] %>% xts_to_df() %>% as_tibble()
+  df_all <- result$data[range] %>% xts_to_df() %>% as_tibble()
   trades <- result$trades[range] %>% xts_to_df() %>% as_tibble()
   start <- stats::start(result$data[range])
   end <- stats::end(result$data[range])
-  indicators <- c("")
+  indicators <- c("Close")
   
   if(startsWith(result$stats$strategy, "macd")) {
-    indicators <- c("macd", "signal")
-    df <- df %>% select(c(index, Close, fast, slow, macd, signal, enterLong, exitLong)) %>%
+    indicators <- c(indicators, "macd", "signal")
+    df <- df_all %>% select(c(index, Close, fast, slow, macd, signal, enterLong, exitLong)) %>%
       mutate(across(c(enterLong, exitLong), ~ if_else(.x == 1, macd, as.numeric(NA))))
   } else if (startsWith(result$stats$strategy, "tema")) {
-    indicators <- c("fast", "medium", "slow")
-    df <- df %>% select(c(index, Close, fast, medium, slow, enterLong, exitLong)) %>%
+    indicators <- c(indicators, "fast", "medium", "slow")
+    df <- df_all %>% select(c(index, Close, fast, medium, slow, enterLong, exitLong)) %>%
       mutate(across(c(enterLong, exitLong), ~ if_else(.x == 1, fast, as.numeric(NA))))
   } else {
     stop("Invalid strategy. Should be macd or tema.")
   }
   
+  if(str_detect(result$stats$strategy, "ml_")) {
+    df <- df %>% add_column(df_all %>% select(h24, pred_bull_ind, pred_bear_ind)) %>%
+      mutate(across(c(pred_bull_ind, pred_bear_ind), ~ if_else(.x == 1, h24, as.numeric(NA))))
+    indicators <- c(indicators, "h24")
+  }
+  
   df_tidy <- df %>%
     pivot_longer(-c(index)) %>%
     mutate(indicator = name %in% indicators) %>%
-    mutate(signal = name %in% c("enterLong", "exitLong"))
+    mutate(signal = name %in% c("enterLong", "exitLong", "pred_bull_ind", "pred_bear_ind"))
   
   df_tidy <- df_tidy %>% mutate(group = case_when(
-    signal | indicator ~ "2.Signals",
-    TRUE ~ "1.Series"
+    signal | indicator ~ "1.Signals",
   ))
   
   series <- df_tidy %>% filter(name == "Close")
@@ -42,7 +47,6 @@ plot_backtest <- function(result, range = "") {
   
   plot <- ggplot() +
     facet_wrap(~group, scales = "free_y", ncol = 1) +
-    geom_line(data = series, aes(x = index, y = value, color = name, linetype = name)) +
     geom_line(data = indicators, aes(x = index, y = value, color = name, linetype = name)) +
     geom_point(data = signals, aes(x = index, y = value, color = name, linetype = name)) +
     geom_col(data = orders, aes(x = index, y = value, fill = name)) +

@@ -1,7 +1,10 @@
+library(seer)
+library(tidyverse)
+
 if(file.exists("custbacktest_plot.R")) {
-  source("custbacktest.R")
+  source("custbacktest_plot.R")
 } else {
-  source("analysis/custbacktest.R")
+  source("analysis/custbacktest_plot.R")
 }
 
 ml_strategies <- function(base_strategy, model, h, w, model_name = NULL) {
@@ -21,7 +24,7 @@ data_dir <- "~/datasets/jcr2020/datasets"
 
 datasets <- tribble(
   ~dataset, ~cost, ~strategy,
-  "d1_dax_2019", 2, list(macd(5, 12), triple_ema(1, 18, 72)),
+  "d1_dax_2019", 2, list(macd(5, 12), triple_ema(14,30,74)),
   "d1_dj30_2019", 2.4, list(macd(6, 12), triple_ema(2, 18, 72)),
   "d1_ibex35_2019", 5, list(macd(7, 12), triple_ema(2, 18, 70))
 )
@@ -46,7 +49,7 @@ strategies <- tb %>%
 # Se requiere el flag debug = T para que se guarden todos los datos del backest (Close, indicadores y señales)
 ml_results <- strategies %>%
   mutate(data = map(filename, read_ohlcv)) %>%
-  mutate(results = pmap(list(dataset, data, strategy, cost), ~ run_backtest(symbol=..1, data=..2, strat=..3, cost=..4, qty=qty, sell_at_end = T, debug = F))) %>%
+  mutate(results = pmap(list(dataset, data, strategy, cost), ~ run_backtest(symbol=..1, data=..2, strat=..3, cost=..4, qty=1, sell_at_end = T, debug = T))) %>%
   select(-data)
 
 ml_stats <- ml_results %>%
@@ -54,9 +57,13 @@ ml_stats <- ml_results %>%
   mutate(stats = map(results, 'stats')) %>%
   select(-cost) %>%
   unnest(stats) %>%
+  mutate(profit_factor = if_else(is.infinite(profit_factor), gross_profits, profit_factor)) %>%
+  mutate(profit_factor = if_else(is.nan(profit_factor), 0, profit_factor)) %>%
   select(-strategy_list)
 
-ml_stats %>% select(dataset, name, net_profit, num_trades, profit_factor) %>%
-  arrange(dataset, name) %>% print(n=100)
+ml_stats %>% select(dataset, name, net_profit, num_trades, profit_factor, max_drawdown, gross_profits, gross_losses) %>%
+   print(n=100)
 
 write_rds(ml_results, file.path("results", paste0(model_name, "backtest", ".rds")))
+
+plot_backtest(ml_stats$results[[7]])

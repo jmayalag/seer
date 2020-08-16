@@ -1,10 +1,17 @@
+#' Plot backtest results
+#'
+#' @param result backtest results
+#' @param range xts range (e.g. "2019", "2018/2019")
+#'
+#' @return
+#' @export
+#' @import plotly
 plot_backtest <- function(result, range = "", additional_indicators) {
-  require(ggplot2)
   df_all <- result$data[range] %>% xts_to_df() %>% as_tibble()
   trades <- result$trades[range] %>% xts_to_df() %>% as_tibble()
   start <- stats::start(result$data[range])
   end <- stats::end(result$data[range])
-  indicators <- c()
+  indicators <- c("Close")
   
   if(startsWith(result$stats$strategy, "macd")) {
     indicators <- c(indicators, "macd", "signal")
@@ -30,7 +37,7 @@ plot_backtest <- function(result, range = "", additional_indicators) {
     mutate(signal = name %in% c("enterLong", "exitLong", "pred_bull_ind", "pred_bear_ind"))
   
   df_tidy <- df_tidy %>% mutate(group = case_when(
-    signal | indicator ~ "2.Signals",
+    signal | indicator ~ "1.Signals",
     TRUE ~ "1. Series"
   ))
   
@@ -42,16 +49,16 @@ plot_backtest <- function(result, range = "", additional_indicators) {
     select(index, order_qty) %>%
     pivot_longer(-c(index)) %>%
     mutate(name = if_else(value >= 0, "Buy", "Sell")) %>%
-    mutate(group = "3. Order")
+    mutate(group = "2. Order")
   
   date_range <- sprintf("%s - %s", start, end)
   
   plot <- ggplot() +
     facet_wrap(~group, scales = "free_y", ncol = 1) +
-    geom_line(data = series, aes(x = index, y = value, color = name, linetype = name)) +
+    geom_line(data = indicators, aes(x = index, y = value, color = name, linetype = name)) +
     geom_line(data = indicators, aes(x = index, y = value, color = name, linetype = name)) +
     geom_point(data = signals, aes(x = index, y = value, color = name, linetype = name)) +
-    geom_col(data = orders, aes(x = index, y = value, fill = name), width = 0.9) +
+    geom_col(data = orders, aes(x = index, y = value, fill = name), position_dodge2(width = 0.9, preserve = "single")) +
     # scale_linetype_manual(values = c("solid", "dotted", "dashed", "longdash", "twodash", "dotdash")) +
     scale_x_datetime(labels = scales::date_format("%b-%y")) +
     ylab(NULL) +
@@ -62,6 +69,14 @@ plot_backtest <- function(result, range = "", additional_indicators) {
   plot
 }
 
+#' Plot with interaction using plotly
+#'
+#' @param ... arguments for `plot_backtest`
+#'
+#' @return
+#' @export
+#'
+#' @examples
 plotly_backtest <- function(...) {
   plotly::ggplotly(plot_backtest(...))
 }

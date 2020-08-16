@@ -1,12 +1,6 @@
 library(seer)
 library(tidyverse)
 
-if(file.exists("custbacktest_plot.R")) {
-  source("custbacktest_plot.R")
-} else {
-  source("analysis/custbacktest_plot.R")
-}
-
 ml_strategies <- function(base_strategy, model, h, w, model_name = NULL) {
   approaches <- tibble(approach = c("risky", "semirisky", "conservative"))
   approaches %>%

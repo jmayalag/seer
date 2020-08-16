@@ -142,13 +142,13 @@ technical_ml <- function(base_strategy, model, h, w, approach = "risky", model_n
 #' @param strat strategy list with the strat_fun
 #' @param cost trade cost
 #' @param qty order size
-#' @param sell_at_end sell at the end of the backtest
+#' @param sell_at_end sell at the end of the backtest.
 #' @param price_fun price function for buying and selling. By default, the opening price
 #' @param debug return additional data for debugging
 #'
 #' @return
 #' @export
-backtest <- function(data, strat, cost, qty, sell_at_end = F, price_fun = quantmod::Op, debug = F) {
+backtest <- function(data, strat, cost, qty, sell_at_end = T, price_fun = quantmod::Op, debug = F) {
   x <- strat$strategy(data)
   backtest <- x[, c("buy", "sell")]
   backtest$order_price <- price_fun(x) # sell and buy price

@@ -9,7 +9,7 @@ backtest(
   strat,
   cost,
   qty,
-  sell_at_end = F,
+  sell_at_end = T,
   price_fun = quantmod::Op,
   debug = F
 )
@@ -23,7 +23,7 @@ backtest(
 
 \item{qty}{order size}
 
-\item{sell_at_end}{sell at the end of the backtest}
+\item{sell_at_end}{sell at the end of the backtest.}
 
 \item{price_fun}{price function for buying and selling. By default, the opening price}
 

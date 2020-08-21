@@ -7,6 +7,10 @@ if (file.exists("custbacktest.R")) {
 suppressMessages(require(tidyverse))
 
 run_backtest_grid <- function(dataset, filename, strategy_name, strategy, grid, cost, qty = 1, sell_at_end = T, debug = F) {
+  result_file <- file.path("results", sprintf("%s-%s.rds", strategy_name, dataset))
+  if (file.exists(result_file)) {
+    return(read_rds(result_file))
+  }
   run_name <- paste0(strategy_name, " grid: ", dataset, ", cost: ", cost)
   message(paste0("Starting ", run_name))
 
@@ -25,7 +29,7 @@ run_backtest_grid <- function(dataset, filename, strategy_name, strategy, grid, 
     )))
 
   message(paste0("Finished ", run_name, ". Experiments: ", nrow(grid)))
-  write_rds(results, file.path("results", sprintf("%s-%s.rds", strategy_name, dataset)))
+  write_rds(results, result_file)
   results
 }
 
@@ -63,14 +67,14 @@ datasets <- tribble(
   mutate(filename = file.path(data_dir, paste0(dataset, ".csv")))
 
 macd_grid <- expand_grid(
-  nFast = 1:10,
-  nSlow = 5:20
+  nFast = 1:25,
+  nSlow = 5:75
 ) %>% filter(nFast < nSlow)
 
 tema_grid <- expand_grid(
-  nFast = 1:10,
-  nMedium = 5:15,
-  nSlow = 10:25
+  nFast = 1:25,
+  nMedium = 15:50,
+  nSlow = 25:75
 ) %>% filter(nFast < nMedium & nMedium < nSlow)
 
 results <- datasets %>%
@@ -85,3 +89,9 @@ best <- top_backtest(results, n = 1)
 best %>%
   mutate(dataset = dataset_name(dataset)) %>%
   t()
+
+
+macd_grid
+tema_grid
+
+results

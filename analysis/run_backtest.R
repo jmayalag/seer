@@ -1,8 +1,5 @@
-if (file.exists("custbacktest.R")) {
-  source("custbacktest.R")
-} else {
-  source("analysis/custbacktest.R")
-}
+library(seer)
+library(tidyverse)
 
 suppressMessages(require(tidyverse))
 

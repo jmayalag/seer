@@ -156,6 +156,7 @@ backtest <- function(data, strat, cost, qty, sell_at_end = T, price_fun = quantm
   # Order is executed the next day
   backtest$order_buy <- xts::lag.xts(backtest$buy)
   backtest$order_sell <- xts::lag.xts(backtest$sell)
+  backtest$buy <- NULL; backtest$sell <- NULL;
   if (sell_at_end) {
     backtest$order_sell[nrow(backtest)] <- 1
   }
@@ -170,8 +171,10 @@ backtest <- function(data, strat, cost, qty, sell_at_end = T, price_fun = quantm
   if (remove_start_sell) {
     backtest <- backtest[-1, ]
   }
+  has_orders <- 1
   
   if (nrow(backtest) == 0) {
+    has_orders <- 0
     z <- data.frame(buy=c(0, 0), sell=c(0,0), order_price=c(0,0), order_buy=c(0,0), order_sell=c(0,0), position=c(0,0), position_cross=c(1,0))
     backtest <- xts(z, index(x)[1:2])
   }
@@ -186,13 +189,37 @@ backtest <- function(data, strat, cost, qty, sell_at_end = T, price_fun = quantm
   
   trades <- backtest[
     backtest$position_cross != 0,
-    c("position_cross", "position_cum", "order_value", "order_qty", "order_cost")
+    c("position_cross", "position_cum", "order_value", "order_qty", "order_cost", "order_price")
   ]
   
-  trades$delta <- -(trades$order_value + lag.xts(trades$order_value))
-  trades$delta[trades$order_qty >= 0] <- 0
-  trades$pips <- trades$delta - trades$order_cost
-  trades$equity <- cumsum(trades$pips)
+  trades$realized_pl <- -(trades$order_value + lag.xts(trades$order_value))
+  trades$realized_pl[trades$order_qty >= 0] <- 0
+  trades$pips <- trades$realized_pl / qty
+  trades$equity <- cumsum(trades$realized_pl - backtest$order_cost)
+  
+  # Take into account close price for drawdown
+  backtest <- cbind(trades, quantmod::Cl(x))
+  colnames(backtest)[length(colnames(backtest))] <- "pos_value"
+  backtest$order_cost[is.na(backtest$order_cost)] <- 0
+  backtest$order_price <- zoo::na.locf(backtest$order_price) # fill forward
+  backtest$realized_pl[is.na(backtest$realized_pl)] <- 0
+  backtest$position_cross[is.na(backtest$position_cross)] <- 0
+  backtest$position_cum <- cumsum(backtest$position_cross)
+  # Only count when holding long position
+  backtest$pos_value <- backtest$pos_value * backtest$position_cum
+  backtest$order_price <- backtest$order_price * backtest$position_cum
+  
+  backtest$unrealized_delta <- backtest$order_price - backtest$pos_value
+  backtest$unrealized_delta[is.na(backtest$unrealized_delta)] <- 0
+  backtest$unrealized_pl <- qty * (backtest$unrealized_delta - xts::lag.xts(backtest$unrealized_delta))
+  backtest$unrealized_pl[is.na(backtest$unrealized_pl)] <- 0
+  backtest$gross_pl <- backtest$realized_pl + backtest$unrealized_pl
+  backtest$gross_pl[is.na(backtest$gross_pl)] <- 0
+  backtest$net_pl <- backtest$gross_pl - backtest$order_cost
+  backtest$equity <- cumsum(backtest$net_pl)
+  backtest$drawdown <- has_orders * (cummax(backtest$equity) - backtest$equity)
+  trades$max_drawdown <- -max(backtest$drawdown)
+
   
   if (debug) {
     list(data = x, backtest = backtest, trades = trades)
@@ -208,8 +235,6 @@ backtest <- function(data, strat, cost, qty, sell_at_end = T, price_fun = quantm
 #' @return
 #' @export
 backtest_stats <- function(result) {
-  result$drawdown <- cummax(result$equity) - result$equity
-  
   net_profit <- as.numeric(xts::last(result)$equity)
   avg_profit_per_trade <- mean(result$pips[result$pips != 0])
   avg_winning_trade <- mean(result$pips[result$pips > 0])
@@ -222,7 +247,7 @@ backtest_stats <- function(result) {
   profit_factor <- abs(gross_profits / gross_losses)
   wins <- sum(result$pips > 0)
   losses <- sum(result$pips < 0)
-  max_drawdown <- -max(result$drawdown)
+  max_drawdown <- -max(-result$max_drawdown)
   
   data.frame(
     net_profit,
@@ -263,4 +288,3 @@ run_backtest <- function(symbol, data, strat, cost=0, qty=1, ...) {
   
   result
 }
-

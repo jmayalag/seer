@@ -10,21 +10,21 @@ run_backtest_grid <- function(dataset, filename, strategy_name, strategy, grid, 
   }
   run_name <- paste0(strategy_name, " grid: ", dataset, ", cost: ", cost)
   message(paste0("Starting ", run_name))
-
+  
   strategies <- grid %>%
     mutate(strategy = pmap(., strategy)) %>%
     rename_with(~ paste0("param.", .x), .cols = !starts_with("strategy")) %>%
     mutate(name = map_chr(strategy, "name"))
-
+  
   data <- read_ohlcv(filename)
-
+  
   results <- strategies %>%
     mutate(result = map(strategy, ~ run_backtest(
       symbol = dataset, data = data, strat = .x,
       cost = cost, qty = qty, sell_at_end = sell_at_end,
       debug = debug
     )))
-
+  
   message(paste0("Finished ", run_name, ". Experiments: ", nrow(grid)))
   write_rds(results, result_file)
   results
@@ -44,13 +44,14 @@ dataset_name <- function(dataset) {
   str_replace_all(dataset, "[\\-_\\d]", "") %>% str_replace("^d", "") %>% str_to_upper()
 }
 
-top_backtest <- function(backtest_results, n = 1) {
-  backtest_results %>%
-    extract_stats() %>%
-    select(-c(filename, symbol, order_size)) %>%
+top_backtest <- function(stats, n = 1, column = "net_profit") {
+  best_profit <- stats %>%
+    select(-c(order_size)) %>%
     mutate(strategy = str_replace_all(strategy, "[_\\d]", "")) %>%
     group_by(dataset, strategy) %>%
-    slice_max(net_profit, n = n)
+    slice_max(net_profit, n = 1, with_ties = T)
+  
+  best_profit %>% slice_max(max_drawdown, n=1, with_ties = F)
 }
 
 data_dir <- "~/datasets/jcr2020/datasets"
@@ -79,16 +80,13 @@ results <- datasets %>%
   mutate(macd_results = pmap(list(dataset, filename, cost), ~ run_backtest_grid(..1, ..2, strategy_name = "MACD", strategy = macd, ..3, grid = macd_grid)))
 
 stats <- extract_stats(results)
+write_rds(stats, file.path("results", "backtest_stats_full.rds"))
+stats <- stats %>% select(-c(strategy_list, symbol, filename))
+write_rds(stats, file.path("results", "backtest_stats.rds"))
 
 # Best params per strategy and dataset
-best <- top_backtest(results, n = 1)
+best <- top_backtest(stats, n = 1)
 
 best %>%
   mutate(dataset = dataset_name(dataset)) %>%
   t()
-
-
-macd_grid
-tema_grid
-
-results

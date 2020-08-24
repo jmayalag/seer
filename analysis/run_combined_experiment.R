@@ -9,30 +9,29 @@ ml_strategies <- function(base_strategy, model, h, w, model_name = NULL) {
     mutate(name = map_chr(strategy, 'name'))
 }
 
-model_path <- "~/datasets/jcr2020/exp3/h24_w12_dDAX_D1_lm.rds"
-
 h <- 24
 w <- 12
 
+model_dir <- "~/datasets/jcr2020/exp3"
 data_dir <- "~/datasets/jcr2020/datasets"
+image_dir <- "results/backtest/orders"
 
 datasets <- tribble(
-  ~dataset, ~cost, ~strategy,
-  "d1_dax_2019", 2, list(macd(5, 12), triple_ema(14,30,74)),
-  "d1_dj30_2019", 2.4, list(macd(6, 12), triple_ema(2, 18, 72)),
-  "d1_ibex35_2019", 5, list(macd(7, 12), triple_ema(2, 18, 70))
+  ~dataset, ~cost, ~strategy, ~model_name,
+  "d1_dax_2019", 2, list(macd(3, 7), triple_ema(2, 19, 26)), "h24_w12_dDAX_D1_lm",
+  "d1_dj30_2019", 2.4, list(macd(3, 28), triple_ema(21, 22, 50)), "h24_w12_dDJI_D1_lm",
+  "d1_ibex35_2019", 5, list(macd(6, 19), triple_ema(22, 28, 70)), "h24_w12_dIBEX_D1_lm",
 )
 
 tb <- datasets %>%
   mutate(filename = file.path(data_dir, paste0(dataset, ".csv"))) %>%
+  mutate(model_path = file.path(model_dir, paste0(model_name, ".rds"))) %>%
+  mutate(model = map(model_path, read_rds)) %>%
   unnest(strategy)
-
-model_name <- basename(model_path) %>% stringr::str_remove(".rds")
-model <- readr::read_rds(model_path)
 
 strategies <- tb %>%
   rename(base_strategy = strategy) %>%
-  mutate(ml_strategy = map(base_strategy, ~ ml_strategies(.x, model, h, w, model_name))) %>%
+  mutate(ml_strategy = pmap(list(base_strategy, model, model_name), ~ ml_strategies(..1, ..2, h, w, ..3))) %>%
   unnest(ml_strategy) %>%
   rename(ml_strategy = strategy) %>%
   select(-name) %>%
@@ -52,12 +51,26 @@ ml_stats <- ml_results %>%
   select(-cost) %>%
   unnest(stats) %>%
   mutate(profit_factor = if_else(is.infinite(profit_factor), gross_profits, profit_factor)) %>%
-  mutate(profit_factor = if_else(is.nan(profit_factor), 0, profit_factor)) %>%
-  select(-strategy_list)
+  mutate(across(where(is.numeric), ~ if_else(is.nan(.x), as.double(0), as.double(.x))))
 
-ml_stats %>% select(dataset, name, net_profit, num_trades, profit_factor, max_drawdown, gross_profits, gross_losses) %>%
+ml_stats %>% select(-c(filename, results, type, symbol, strategy, order_size, num_txns, wins, losses, model, strategy_list)) %>%
    print(n=100)
 
-write_rds(ml_results, file.path("results", paste0(model_name, "backtest", ".rds")))
+write_rds(ml_results, file.path("results", "hybrid_backtest.rds"))
+write_rds(ml_stats, file.path("results", "hybrid_stats.rd"))
 
-plot_backtest(ml_stats$results[[7]])
+if(file.exists("example_plot_backtest.R")) {
+  source("example_plot_backtest.R")
+} else {
+  source("analysis/example_plot_backtest.R")
+}
+dir.create(image_dir, recursive = T, showWarnings = F)
+
+plots <- ml_results %>%
+  mutate(plot = map(results, ~ plot_trades(.x$data, .x$trades) + ggtitle(.x$stats$strategy, subtitle=.x$stats$symbol))) %>%
+  select(dataset, name, plot) %>%
+  mutate(plot_file = file.path(image_dir, paste0(dataset, "-", name, ".png")))
+
+plots %>%
+  rowwise() %>%
+  do(x = ggsave(.$plot_file, .$plot, width = 8, height = 5))

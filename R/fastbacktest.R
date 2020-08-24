@@ -194,7 +194,7 @@ backtest <- function(data, strat, cost, qty, sell_at_end = T, price_fun = quantm
   
   trades$realized_pl <- -(trades$order_value + lag.xts(trades$order_value))
   trades$realized_pl[trades$order_qty >= 0] <- 0
-  trades$pips <- trades$realized_pl / qty
+  trades$pips <- trades$realized_pl - trades$order_cost
   trades$equity <- cumsum(trades$realized_pl - backtest$order_cost)
   
   # Take into account close price for drawdown
@@ -209,7 +209,7 @@ backtest <- function(data, strat, cost, qty, sell_at_end = T, price_fun = quantm
   backtest$pos_value <- backtest$pos_value * backtest$position_cum
   backtest$order_price <- backtest$order_price * backtest$position_cum
   
-  backtest$unrealized_delta <- backtest$order_price - backtest$pos_value
+  backtest$unrealized_delta <- backtest$pos_value - backtest$order_price
   backtest$unrealized_delta[is.na(backtest$unrealized_delta)] <- 0
   backtest$unrealized_pl <- qty * (backtest$unrealized_delta - xts::lag.xts(backtest$unrealized_delta))
   backtest$unrealized_pl[is.na(backtest$unrealized_pl)] <- 0

@@ -4,12 +4,14 @@
 \alias{macd}
 \title{MACD strategy}
 \usage{
-macd(nFast, nSlow)
+macd(nFast, nSlow, nSig)
 }
 \arguments{
 \item{nFast}{n for fast EMA}
 
 \item{nSlow}{n for slow EMA}
+
+\item{nSig}{n for signal EMA}
 }
 \value{
 a list object to pass to the backtest function

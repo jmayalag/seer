@@ -18,9 +18,9 @@ image_dir <- "results/backtest/orders"
 
 datasets <- tribble(
   ~dataset, ~cost, ~strategy, ~model_name,
-  "d1_ibex35_2019", 5, list(macd(6, 19), triple_ema(2, 6, 10)), "h24_w12_dIBEX_D1_lm",
-  "d1_dax_2019", 2, list(macd(4, 6), triple_ema(14, 30, 74)), "h24_w12_dDAX_D1_lm",
-  "d1_dj30_2019", 2.4, list(macd(3, 28), triple_ema(18, 34, 54)), "h24_w12_dDJI_D1_lm",
+  "d1_ibex35_2019", 5, list(macd(6, 19, 9), triple_ema(2, 6, 10)), "h24_w12_dIBEX_D1_lm",
+  "d1_dax_2019", 2, list(macd(4, 6, 9), triple_ema(14, 30, 74)), "h24_w12_dDAX_D1_lm",
+  "d1_dj30_2019", 2.4, list(macd(3, 28, 9), triple_ema(18, 34, 54)), "h24_w12_dDJI_D1_lm",
 )
 
 tb <- datasets %>%

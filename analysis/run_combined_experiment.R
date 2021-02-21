@@ -18,9 +18,9 @@ image_dir <- "results/backtest/orders"
 
 datasets <- tribble(
   ~dataset, ~cost, ~strategy, ~model_name,
-  "d1_dax_2019", 2, list(macd(3, 7), triple_ema(2, 19, 26)), "h24_w12_dDAX_D1_lm",
-  "d1_dj30_2019", 2.4, list(macd(3, 28), triple_ema(21, 22, 50)), "h24_w12_dDJI_D1_lm",
-  "d1_ibex35_2019", 5, list(macd(6, 19), triple_ema(22, 28, 70)), "h24_w12_dIBEX_D1_lm",
+  "d1_ibex35_2019", 5, list(macd(6, 19), triple_ema(2, 6, 10)), "h24_w12_dIBEX_D1_lm",
+  "d1_dax_2019", 2, list(macd(4, 6), triple_ema(14, 30, 74)), "h24_w12_dDAX_D1_lm",
+  "d1_dj30_2019", 2.4, list(macd(3, 28), triple_ema(18, 34, 54)), "h24_w12_dDJI_D1_lm",
 )
 
 tb <- datasets %>%
@@ -53,8 +53,8 @@ ml_stats <- ml_results %>%
   mutate(profit_factor = if_else(is.infinite(profit_factor), gross_profits, profit_factor)) %>%
   mutate(across(where(is.numeric), ~ if_else(is.nan(.x), as.double(0), as.double(.x))))
 
-ml_stats %>% select(-c(filename, results, type, symbol, strategy, order_size, num_txns, wins, losses, model, strategy_list)) %>%
-   print(n=100)
+ml_stats %>% select(name, dataset, num_trades, profit_factor, net_profit, avg_profit_per_trade, max_drawdown, gross_profits, gross_losses) %>%
+   print(n=100) %>% t
 
 write_rds(ml_results, file.path("results", "hybrid_backtest.rds"))
 write_rds(ml_stats, file.path("results", "hybrid_stats.rd"))
@@ -71,6 +71,19 @@ plots <- ml_results %>%
   select(dataset, name, plot) %>%
   mutate(plot_file = file.path(image_dir, paste0(dataset, "-", name, ".png")))
 
-plots %>%
-  rowwise() %>%
-  do(x = ggsave(.$plot_file, .$plot, width = 8, height = 5))
+# plots %>%
+#   rowwise() %>%
+#   do(x = ggsave(.$plot_file, .$plot, width = 8, height = 5))
+
+
+# st_tema <- triple_ema(2, 6, 10)
+# result <- run_backtest("IBEX", read_ohlcv("~/datasets/jcr2020/datasets/d1_ibex35_2019.csv"), triple_ema(2, 6, 10), cost = 5, debug = T, sell_at_end = T)
+# result$stats
+
+
+ml_stats %>% 
+  select(name, dataset, num_trades, profit_factor, net_profit, avg_profit_per_trade, max_drawdown, gross_profits, gross_losses) %>% 
+  pivot_longer(cols = -c(name, dataset), names_to = "metric") %>%
+  mutate(base_strategy = str_split_fixed(name, pattern = "_", n = 2)[, 1]) %>%
+  mutate(hybrid_strategy = str_split_fixed(name, pattern = "ml_", n = 2)[, 2]) %>%
+  write_csv("results/ml_hybrid_stats.csv")

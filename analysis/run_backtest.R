@@ -8,7 +8,7 @@ run_backtest_grid <- function(dataset, filename, strategy_name, strategy, grid, 
   if (file.exists(result_file)) {
     return(read_rds(result_file))
   }
-  run_name <- paste0(strategy_name, " grid: ", dataset, ", cost: ", cost)
+  run_name <- paste0(strategy_name, " dataset: ", dataset, ", cost: ", cost, ", grid size: ", nrow(grid))
   message(paste0("Starting ", run_name))
   
   strategies <- grid %>%
@@ -66,18 +66,24 @@ datasets <- tribble(
 
 macd_grid <- expand_grid(
   nFast = 1:25,
-  nSlow = 5:75
+  nSlow = 5:75,
+  nSig = 5:25
 ) %>% filter(nFast < nSlow)
 
-tema_grid <- expand_grid(
-  nFast = 1:25,
-  nMedium = 15:50,
-  nSlow = 25:75
-) %>% filter(nFast < nMedium & nMedium < nSlow)
+# tema_grid <- expand_grid(
+#   nFast = 1:25,
+#   nMedium = 15:50,
+#   nSlow = 25:75
+# ) %>% filter(nFast < nMedium & nMedium < nSlow)
 
-results <- datasets %>%
-  mutate(tema_results = pmap(list(dataset, filename, cost), ~ run_backtest_grid(..1, ..2, strategy_name = "TEMA", strategy = triple_ema, ..3, grid = tema_grid))) %>%
-  mutate(macd_results = pmap(list(dataset, filename, cost), ~ run_backtest_grid(..1, ..2, strategy_name = "MACD", strategy = macd, ..3, grid = macd_grid)))
+# results <- datasets %>%
+#   mutate(tema_results = pmap(list(dataset, filename, cost), ~ run_backtest_grid(..1, ..2, strategy_name = "TEMA", strategy = triple_ema, ..3, grid = tema_grid))) %>%
+#   mutate(macd_results = pmap(list(dataset, filename, cost), ~ run_backtest_grid(..1, ..2, strategy_name = "MACD", strategy = macd, ..3, grid = macd_grid)))
+
+system.time({
+  results <- datasets %>%
+    mutate(macd_results = pmap(list(dataset, filename, cost), ~ run_backtest_grid(..1, ..2, strategy_name = "MACD", strategy = macd, ..3, grid = macd_grid)))
+}, gcFirst = T)
 
 stats <- extract_stats(results)
 write_rds(stats, file.path("results", "backtest_stats_full.rds"))

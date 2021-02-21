@@ -59,15 +59,16 @@ triple_ema <- function(nFast, nMedium, nSlow) {
 #'
 #' @param nFast n for fast EMA
 #' @param nSlow n for slow EMA
+#' @param nSig n for signal EMA
 #'
 #' @return a list object to pass to the backtest function
 #' @export
 #'
 #' @examples
 #' macd(5, 12)
-macd <- function(nFast, nSlow) {
+macd <- function(nFast, nSlow, nSig) {
   strategy_fun <- function(x) {
-    x_macd <- TTR::MACD(x$Close, nFast = nFast, nSlow = nSlow)
+    x_macd <- TTR::MACD(x$Close, nFast = nFast, nSlow = nSlow, nSig = nSig)
     x$macd <- x_macd$macd
     x$signal <- x_macd$signal
     
@@ -79,11 +80,11 @@ macd <- function(nFast, nSlow) {
     x
   }
   
-  name <- sprintf("macd_%d_%d", nFast, nSlow)
+  name <- sprintf("macd_%d_%d_%d", nFast, nSlow, nSig)
   
   strategy <- list(
     name = name,
-    params = c(nFast, nSlow),
+    params = c(nFast, nSlow, nSig),
     strategy = strategy_fun
   )
 }

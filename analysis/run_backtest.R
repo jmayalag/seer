@@ -1,7 +1,5 @@
-library(seer)
-library(tidyverse)
-
-suppressMessages(require(tidyverse))
+suppressMessages(library(seer))
+suppressMessages(library(tidyverse))
 
 run_backtest_grid <- function(dataset, filename, strategy_name, strategy, grid, cost, qty = 1, sell_at_end = T, debug = F) {
   result_file <- file.path("results", sprintf("%s-%s.rds", strategy_name, dataset))
@@ -40,20 +38,6 @@ extract_stats <- function(backtest_results) {
     select(-starts_with("param"))
 }
 
-dataset_name <- function(dataset) {
-  str_replace_all(dataset, "[\\-_\\d]", "") %>% str_replace("^d", "") %>% str_to_upper()
-}
-
-top_backtest <- function(stats, n = 1, column = "net_profit") {
-  best_profit <- stats %>%
-    select(-c(order_size)) %>%
-    mutate(strategy = str_replace_all(strategy, "[_\\d]", "")) %>%
-    group_by(dataset, strategy) %>%
-    slice_max(net_profit, n = 1, with_ties = T)
-  
-  best_profit %>% slice_max(max_drawdown, n=1, with_ties = F)
-}
-
 data_dir <- "~/datasets/jcr2020/datasets"
 
 datasets <- tribble(
@@ -70,29 +54,53 @@ macd_grid <- expand_grid(
   nSig = 5:25
 ) %>% filter(nFast < nSlow)
 
-# tema_grid <- expand_grid(
-#   nFast = 1:25,
-#   nMedium = 15:50,
-#   nSlow = 25:75
-# ) %>% filter(nFast < nMedium & nMedium < nSlow)
+tema_grid <- expand_grid(
+  nFast = 1:25,
+  nMedium = 15:50,
+  nSlow = 25:75
+) %>% filter(nFast < nMedium & nMedium < nSlow)
 
-# results <- datasets %>%
-#   mutate(tema_results = pmap(list(dataset, filename, cost), ~ run_backtest_grid(..1, ..2, strategy_name = "TEMA", strategy = triple_ema, ..3, grid = tema_grid))) %>%
-#   mutate(macd_results = pmap(list(dataset, filename, cost), ~ run_backtest_grid(..1, ..2, strategy_name = "MACD", strategy = macd, ..3, grid = macd_grid)))
+results <- datasets %>%
+  mutate(tema_results = pmap(list(dataset, filename, cost), ~ run_backtest_grid(..1, ..2, strategy_name = "TEMA", strategy = triple_ema, ..3, grid = tema_grid))) %>%
+  mutate(macd_results = pmap(list(dataset, filename, cost), ~ run_backtest_grid(..1, ..2, strategy_name = "MACD", strategy = macd, ..3, grid = macd_grid)))
 
-system.time({
-  results <- datasets %>%
-    mutate(macd_results = pmap(list(dataset, filename, cost), ~ run_backtest_grid(..1, ..2, strategy_name = "MACD", strategy = macd, ..3, grid = macd_grid)))
-}, gcFirst = T)
 
-stats <- extract_stats(results)
-write_rds(stats, file.path("results", "backtest_stats_full.rds"))
-stats <- stats %>% select(-c(strategy_list, symbol, filename))
+# Summarize stats separately to prevent filling the memory
+stats <- expand_grid(
+  dataset = datasets$dataset,
+  strategy_name = c("MACD")
+) %>%
+  mutate(filename = file.path("results", sprintf("%s-%s.rds", strategy_name, dataset))) %>%
+  mutate(strategy_stats = map(filename, function(results_file) {
+    tb <- tibble(results=list(read_rds(results_file)))
+    extract_stats(tb)
+  })) %>%
+  unnest(strategy_stats) %>%
+  select(-c(strategy_list, symbol, filename))
+
+write_rds(stats, file.path("results", "backtest_stats_macd.rds"))
+rm(stats)
+gc()
+
+stats <- expand_grid(
+  dataset = datasets$dataset,
+  strategy_name = c("TEMA")
+) %>%
+  mutate(filename = file.path("results", sprintf("%s-%s.rds", strategy_name, dataset))) %>%
+  mutate(strategy_stats = map(filename, function(results_file) {
+    tb <- tibble(results=list(read_rds(results_file)))
+    extract_stats(tb)
+  })) %>%
+  unnest(strategy_stats) %>%
+  select(-c(strategy_list, symbol, filename))
+
+write_rds(stats, file.path("results", "backtest_stats_tema.rds"))
+rm(stats)
+gc()
+
+stats <- rbind(
+  read_rds(file.path("results", "backtest_stats_tema.rds")), 
+  read_rds(file.path("results", "backtest_stats_macd.rds"))
+)
+
 write_rds(stats, file.path("results", "backtest_stats.rds"))
-
-# Best params per strategy and dataset
-best <- top_backtest(stats, n = 1)
-
-best %>%
-  mutate(dataset = dataset_name(dataset)) %>%
-  t()

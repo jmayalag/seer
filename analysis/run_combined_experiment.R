@@ -58,7 +58,7 @@ ml_stats %>% select(name, dataset, num_trades, profit_factor, net_profit, avg_pr
    print(n=100)
 
 write_rds(ml_results, file.path("results", "hybrid_backtest.rds"))
-write_rds(ml_stats, file.path("results", "hybrid_stats.rd"))
+write_rds(ml_stats, file.path("results", "hybrid_stats.rds"))
 
 if(file.exists("example_plot_backtest.R")) {
   source("example_plot_backtest.R")

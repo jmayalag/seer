@@ -18,8 +18,8 @@ image_dir <- "results/backtest/orders"
 
 datasets <- tribble(
   ~dataset, ~cost, ~strategy, ~model_name,
-  "d1_ibex35_2019", 5, list(macd(6, 19, 9), triple_ema(2, 6, 10)), "h24_w12_dIBEX_D1_lm",
-  "d1_dax_2019", 2, list(macd(4, 6, 9), triple_ema(14, 30, 74)), "h24_w12_dDAX_D1_lm",
+  "d1_ibex35_2019", 5, list(macd(9, 19, 6), triple_ema(2, 6, 10)), "h24_w12_dIBEX_D1_lm",
+  "d1_dax_2019", 2, list(macd(3, 11, 6), triple_ema(14, 30, 74)), "h24_w12_dDAX_D1_lm",
   "d1_dj30_2019", 2.4, list(macd(3, 28, 9), triple_ema(18, 34, 54)), "h24_w12_dDJI_D1_lm",
 )
 
@@ -50,11 +50,12 @@ ml_stats <- ml_results %>%
   mutate(stats = map(results, 'stats')) %>%
   select(-cost) %>%
   unnest(stats) %>%
-  mutate(profit_factor = if_else(is.infinite(profit_factor), gross_profits, profit_factor)) %>%
+  # mutate(profit_factor = if_else(is.infinite(profit_factor), gross_profits, profit_factor)) %>%
+  mutate(win_prob = wins / num_trades * 100) %>%
   mutate(across(where(is.numeric), ~ if_else(is.nan(.x), as.double(0), as.double(.x))))
 
-ml_stats %>% select(name, dataset, num_trades, profit_factor, net_profit, avg_profit_per_trade, max_drawdown, gross_profits, gross_losses) %>%
-   print(n=100) %>% t
+ml_stats %>% select(name, dataset, num_trades, profit_factor, net_profit, avg_profit_per_trade, max_drawdown, win_prob) %>%
+   print(n=100)
 
 write_rds(ml_results, file.path("results", "hybrid_backtest.rds"))
 write_rds(ml_stats, file.path("results", "hybrid_stats.rd"))
@@ -79,7 +80,6 @@ plots <- ml_results %>%
 # st_tema <- triple_ema(2, 6, 10)
 # result <- run_backtest("IBEX", read_ohlcv("~/datasets/jcr2020/datasets/d1_ibex35_2019.csv"), triple_ema(2, 6, 10), cost = 5, debug = T, sell_at_end = T)
 # result$stats
-
 
 ml_stats %>% 
   select(name, dataset, num_trades, profit_factor, net_profit, avg_profit_per_trade, max_drawdown, gross_profits, gross_losses) %>% 

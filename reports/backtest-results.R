@@ -31,7 +31,7 @@ top_backtest <- function(stats, n = 1, column = "net_profit") {
     group_by(dataset, strategy) %>%
     slice_max(.data[[column]], n = n, with_ties = T)
   
-  best %>% slice_max(max_drawdown, n=n, with_ties = F)
+  best %>% slice_min(max_drawdown, n=n, with_ties = F)
 }
 
 stats_fm <- stats %>%
@@ -54,6 +54,7 @@ table <- top_backtest(stats_fm, n = 5, column = "profit_factor") %>%
   mutate(row = row_number()) %>%
   pivot_wider_spec(spec) %>%
   select(-row)
+table
 
 datasets <- stats_fm %>% distinct(dataset)
 names(table) <- c("Strategy", rep(c("Parameters", "PF"), nrow(datasets)))
@@ -98,12 +99,6 @@ names(table) <- c("Index", "Strategy", "Parameters", "$\\#T$", "$PF$", "$NT$", "
 
 
 #' # 3. Hybrid strategies results
-
-#+ results
-table %>%
-  kbl(booktabs = T, digits = 3, escape = F) %>%
-  kable_styling(latex_options = c("HOLD_position")) %>%
-  collapse_rows(columns = 1:2, latex_hline = "major")
 
 #+ results2
 table %>%

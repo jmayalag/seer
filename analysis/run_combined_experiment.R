@@ -55,7 +55,8 @@ ml_stats <- ml_results %>%
   mutate(across(where(is.numeric), ~ if_else(is.nan(.x), as.double(0), as.double(.x))))
 
 ml_stats %>% select(name, dataset, num_trades, profit_factor, net_profit, avg_profit_per_trade, max_drawdown, win_prob) %>%
-   print(n=100)
+  filter(!str_detect(name, "(semirisky|conservative)")) %>%
+  print(n=100)
 
 write_rds(ml_results, file.path("results", "hybrid_backtest.rds"))
 write_rds(ml_stats, file.path("results", "hybrid_stats.rds"))

@@ -9,19 +9,19 @@ ml_strategies <- function(base_strategy, model, h, w, model_name = NULL) {
     mutate(name = map_chr(strategy, 'name'))
 }
 
-h <- 24
-w <- 12
-
-model_dir <- "~/datasets/jcr2020/exp3"
-data_dir <- "~/datasets/jcr2020/datasets"
+model_dir <- "~/datasets/jcr2020/exp3/lmodels"
+data_dir <- "~/datasets/jcr2020/exp3/datasets"
 image_dir <- "results/backtest/orders"
 
 datasets <- tribble(
   ~dataset, ~cost, ~strategy, ~model_name,
-  "d1_ibex35_2019", 5, list(macd(9, 19, 6), triple_ema(2, 6, 10)), "h24_w12_dIBEX_D1_lm",
-  "d1_dax_2019", 2, list(macd(3, 11, 6), triple_ema(14, 30, 74)), "h24_w12_dDAX_D1_lm",
-  "d1_dj30_2019", 2.4, list(macd(3, 28, 9), triple_ema(18, 34, 54)), "h24_w12_dDJI_D1_lm",
-)
+  "d1_ibex35_2019", 5, list(macd(9, 19, 6), triple_ema(2, 6, 10)), "ibex35_w72_lm",
+  "d1_dax_2019", 2, list(macd(3, 11, 6), triple_ema(14, 30, 74)), "dax_w12_lm",
+  "d1_dj30_2019", 2.4, list(macd(3, 28, 9), triple_ema(18, 34, 54)), "dj30_w96_lm",
+) %>%
+  mutate(w = str_match(model_name, "_w(\\d+)_")[,2] %>% as.numeric())
+
+h <- 24
 
 tb <- datasets %>%
   mutate(filename = file.path(data_dir, paste0(dataset, ".csv"))) %>%
@@ -31,7 +31,7 @@ tb <- datasets %>%
 
 strategies <- tb %>%
   rename(base_strategy = strategy) %>%
-  mutate(ml_strategy = pmap(list(base_strategy, model, model_name), ~ ml_strategies(..1, ..2, h, w, ..3))) %>%
+  mutate(ml_strategy = pmap(list(base_strategy, model, w, model_name), ~ ml_strategies(..1, ..2, h, ..3, ..4))) %>%
   unnest(ml_strategy) %>%
   rename(ml_strategy = strategy) %>%
   select(-name) %>%

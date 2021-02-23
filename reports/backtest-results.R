@@ -22,7 +22,6 @@ if (basename(root) != "seer") {
 
 source(file.path(root, "reports/constants.R"))
 
-
 stats <- read_rds(file.path(root, "results/backtest_stats.rds"))
 
 top_backtest <- function(stats, n = 1, column = "net_profit") {
@@ -92,16 +91,18 @@ stats_fm <- stats %>%
 table <- stats_fm %>%
   mutate(params = paste0(hybrid_strategy, params)) %>%
   select(-hybrid_strategy) %>%
-  mutate(across(6:9, ~formattable::digits(.x, digits = 1))) %>%
-  mutate(across(5, ~formattable::digits(.x, digits = 3)))
+  mutate(across(6:9, ~formattable::digits(.x, digits = 2))) %>%
+  mutate(across(5, ~formattable::digits(.x, digits = 3))) %>%
+  mutate(across(where(is.numeric), ~ if_else(is.infinite(.x), "$\\infty$", format(.x))))
 
 names(table) <- c("Index", "Strategy", "Parameters", "$\\#T$", "$PF$", "$NT$", "$\\overline{T}$", "$D_{max}$", "$PP$")
-
+  
 
 #' # 3. Hybrid strategies results
 
 #+ results2
 table %>%
-  kbl(booktabs = T, escape = F) %>%
+  kbl(booktabs = T, escape = F, align = c(rep("l", 3), rep("r", ncol(table) - 3))) %>%
   kable_styling(latex_options = c("HOLD_position")) %>%
   collapse_rows(columns = 1:2, latex_hline = "custom", custom_latex_hline = 1:2)
+

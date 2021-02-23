@@ -3,38 +3,36 @@ suppressMessages(library(tidyverse))
 
 run_backtest_grid <- function(dataset, filename, strategy_name, strategy, grid, cost, qty = 1, sell_at_end = T, debug = F) {
   result_file <- file.path("results", sprintf("%s-%s.rds", strategy_name, dataset))
-  if (file.exists(result_file)) {
-    return(read_rds(result_file))
-  }
   run_name <- paste0(strategy_name, " dataset: ", dataset, ", cost: ", cost, ", grid size: ", nrow(grid))
+  if (file.exists(result_file)) {
+    message(paste("Found previous", run_name, result_file))
+    return(result_file)
+  }
   message(paste0("Starting ", run_name))
-  
+
   strategies <- grid %>%
     mutate(strategy = pmap(., strategy)) %>%
     rename_with(~ paste0("param.", .x), .cols = !starts_with("strategy")) %>%
     mutate(name = map_chr(strategy, "name"))
-  
+
   data <- read_ohlcv(filename)
-  
+
   results <- strategies %>%
     mutate(result = map(strategy, ~ run_backtest(
       symbol = dataset, data = data, strat = .x,
       cost = cost, qty = qty, sell_at_end = sell_at_end,
       debug = debug
     )))
-  
+
   message(paste0("Finished ", run_name, ". Experiments: ", nrow(grid)))
   write_rds(results, result_file)
-  results
+  result_file
 }
 
 extract_stats <- function(backtest_results) {
   backtest_results %>%
-    pivot_longer(ends_with("results"), names_to = "strategy_result") %>%
-    unnest(value) %>%
-    rename(strategy_list = strategy) %>%
     mutate(map_df(result, "stats")) %>%
-    select(-c(strategy_result, result)) %>%
+    select(-c(result, strategy)) %>%
     select(-starts_with("param"))
 }
 
@@ -48,59 +46,37 @@ datasets <- tribble(
 ) %>%
   mutate(filename = file.path(data_dir, paste0(dataset, ".csv")))
 
-macd_grid <- expand_grid(
-  nFast = 1:25,
-  nSlow = 5:75,
-  nSig = 5:25
-) %>% filter(nFast < nSlow)
+backtests <- tribble(
+  ~strategy_name, ~strategy, ~grid,
+  
+  "TEMA", triple_ema, expand_grid(
+    nFast = 1:25,
+    nMedium = 5:50,
+    nSlow = 10:75
+  ) %>% filter(nFast < nMedium & nMedium < nSlow),
+  
+  "MACD", macd, expand_grid(
+    nFast = 1:25,
+    nSlow = 5:75,
+    nSig = 5:25
+  ) %>% filter(nFast < nSlow)
+)
 
-tema_grid <- expand_grid(
-  nFast = 1:25,
-  nMedium = 15:50,
-  nSlow = 25:75
-) %>% filter(nFast < nMedium & nMedium < nSlow)
-
-results <- datasets %>%
-  mutate(tema_results = pmap(list(dataset, filename, cost), ~ run_backtest_grid(..1, ..2, strategy_name = "TEMA", strategy = triple_ema, ..3, grid = tema_grid))) %>%
-  mutate(macd_results = pmap(list(dataset, filename, cost), ~ run_backtest_grid(..1, ..2, strategy_name = "MACD", strategy = macd, ..3, grid = macd_grid)))
+results <- pmap_df(list(backtests$strategy_name, backtests$strategy, backtests$grid), function(strategy_name, strategy, grid) {
+  message(sprintf("%s, n: %d", strategy_name, nrow(grid)))
+  
+  pmap_df(list(datasets$dataset, datasets$filename, datasets$cost), function(dataset, filename, cost) {
+    data.frame(results_file=run_backtest_grid(dataset, filename, strategy_name = strategy_name, strategy = strategy, cost, grid = grid))
+  })
+})
 
 
 # Summarize stats separately to prevent filling the memory
-stats <- expand_grid(
-  dataset = datasets$dataset,
-  strategy_name = c("MACD")
-) %>%
-  mutate(filename = file.path("results", sprintf("%s-%s.rds", strategy_name, dataset))) %>%
-  mutate(strategy_stats = map(filename, function(results_file) {
-    tb <- tibble(results=list(read_rds(results_file)))
-    extract_stats(tb)
+stats <- results %>%
+  mutate(strategy_stats = map(results_file, function(results_file) {
+    res <- read_rds(results_file)
+    extract_stats(res)
   })) %>%
-  unnest(strategy_stats) %>%
-  select(-c(strategy_list, symbol, filename))
-
-write_rds(stats, file.path("results", "backtest_stats_macd.rds"))
-rm(stats)
-gc()
-
-stats <- expand_grid(
-  dataset = datasets$dataset,
-  strategy_name = c("TEMA")
-) %>%
-  mutate(filename = file.path("results", sprintf("%s-%s.rds", strategy_name, dataset))) %>%
-  mutate(strategy_stats = map(filename, function(results_file) {
-    tb <- tibble(results=list(read_rds(results_file)))
-    extract_stats(tb)
-  })) %>%
-  unnest(strategy_stats) %>%
-  select(-c(strategy_list, symbol, filename))
-
-write_rds(stats, file.path("results", "backtest_stats_tema.rds"))
-rm(stats)
-gc()
-
-stats <- rbind(
-  read_rds(file.path("results", "backtest_stats_tema.rds")), 
-  read_rds(file.path("results", "backtest_stats_macd.rds"))
-)
+  unnest(strategy_stats)
 
 write_rds(stats, file.path("results", "backtest_stats.rds"))

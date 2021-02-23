@@ -71,12 +71,3 @@ plot_trades <- function(data, trades, range = "") {
   
   pl
 }
-
-data_dir <- "~/datasets/jcr2020/datasets"
-
-st_tema <- triple_ema(14, 30, 74)
-result <- run_backtest("DAX", read_dataset("d1_dax_2019", data_dir), st_tema, cost = 2, debug = T, sell_at_end = T)
-
-plot <- plot_trades(result$data, result$trades) +
-  ggtitle(result$stats$strategy, subtitle = result$stats$symbol)
-print(plot)

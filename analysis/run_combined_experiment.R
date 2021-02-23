@@ -68,21 +68,17 @@ if(file.exists("example_plot_backtest.R")) {
 dir.create(image_dir, recursive = T, showWarnings = F)
 
 plots <- ml_results %>%
-  mutate(plot = map(results, ~ plot_trades(.x$data, .x$trades) + ggtitle(.x$stats$strategy, subtitle=.x$stats$symbol))) %>%
+  mutate(plot = map(results, ~ plot_trades(.x$data, .x$trades))) %>%
   select(dataset, name, plot) %>%
   mutate(plot_file = file.path(image_dir, paste0(dataset, "-", name, ".png")))
 
-# plots %>%
-#   rowwise() %>%
-#   do(x = ggsave(.$plot_file, .$plot, width = 8, height = 5))
-
-
-# st_tema <- triple_ema(2, 6, 10)
-# result <- run_backtest("IBEX", read_ohlcv("~/datasets/jcr2020/datasets/d1_ibex35_2019.csv"), triple_ema(2, 6, 10), cost = 5, debug = T, sell_at_end = T)
-# result$stats
+plots %>%
+  rowwise() %>%
+  do(x = ggsave(.$plot_file, .$plot, width = 8, height = 5))
 
 ml_stats %>% 
-  select(name, dataset, num_trades, profit_factor, net_profit, avg_profit_per_trade, max_drawdown, gross_profits, gross_losses) %>% 
+  select(name, dataset, num_trades, profit_factor, net_profit, avg_profit_per_trade, max_drawdown, wins) %>% 
+  mutate(win_prob = wins / num_trades * 100) %>%
   pivot_longer(cols = -c(name, dataset), names_to = "metric") %>%
   mutate(base_strategy = str_split_fixed(name, pattern = "_", n = 2)[, 1]) %>%
   mutate(hybrid_strategy = str_split_fixed(name, pattern = "ml_", n = 2)[, 2]) %>%

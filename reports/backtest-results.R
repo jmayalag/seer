@@ -35,18 +35,20 @@ top_backtest <- function(stats, n = 1, column = "net_profit") {
 }
 
 stats_fm <- stats %>%
+  rename(dataset = symbol) %>%
   mutate(dataset = str_match(dataset, "d1_(\\w+)_")[,2] %>% str_to_upper()) %>%
   mutate(dataset = to_ordered(dataset, symbols)) %>%
-  mutate(strategy = to_ordered(strategy_name, strategies)) %>%
+  mutate(strategy = str_split_fixed(name, "_", 2)[, 1]) %>%
+  mutate(strategy = to_ordered(toupper(strategy), strategies)) %>%
   mutate(params = str_replace(name, "[a-zA-Z]+_", "") %>% str_replace_all("_", ", ") %>% paste0("(", ., ")")) %>%
-  select(-name)
+  select(-c(name, results_file))
 
 spec <- stats_fm %>%
   build_wider_spec(names_from = dataset, values_from = c(params, profit_factor)) %>%
   arrange(dataset) %>%
   mutate(.name = sprintf("%s %s", dataset, .value))
 
-table <- top_backtest(stats_fm, n = 6, column = "profit_factor") %>%
+table <- top_backtest(stats_fm, n = 5, column = "profit_factor") %>%
   select(strategy, params, profit_factor, dataset) %>%
   arrange(strategy, dataset, desc(profit_factor)) %>%
   mutate(row = row_number()) %>%

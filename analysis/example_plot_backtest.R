@@ -63,8 +63,8 @@ plot_trades <- function(data, trades, range = "") {
   pl <- ggplot() +
     geom_line(data = series, aes(x = index, y = Close), color = "black") +
     geom_point(data = trades, aes(x = index, y = Close, fill = order_type, color = order_type, shape = order_type, group = order_type)) +
-    scale_color_manual(values=c('red','green'), name = "Order Type") +
-    scale_fill_manual(values=c('red','green'), name = "Order Type") +
+    scale_color_manual(values=c('green','red'), name = "Order Type") +
+    scale_fill_manual(values=c('green','red'), name = "Order Type") +
     scale_shape_manual(values=c(24, 25), name = "Order Type") + 
     ylab("Closing Price") + xlab(NULL) +
     theme_Publication()

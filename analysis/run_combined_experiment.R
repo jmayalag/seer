@@ -74,8 +74,9 @@ plots <- ml_results %>%
   mutate(plot_file = file.path(image_dir, paste0(dataset, "-", name, ".png")))
 
 plots %>%
+  filter(!str_detect(name, "(semirisky|conservative)")) %>%
   rowwise() %>%
-  do(x = ggsave(.$plot_file, .$plot, width = 8, height = 5))
+  do(x = ggsave(.$plot_file, .$plot, width = 8, height = 5)) 
 
 ml_stats %>% 
   select(name, dataset, num_trades, profit_factor, net_profit, avg_profit_per_trade, max_drawdown, wins) %>% 
@@ -83,4 +84,6 @@ ml_stats %>%
   pivot_longer(cols = -c(name, dataset), names_to = "metric") %>%
   mutate(base_strategy = str_split_fixed(name, pattern = "_", n = 2)[, 1]) %>%
   mutate(hybrid_strategy = str_split_fixed(name, pattern = "ml_", n = 2)[, 2]) %>%
-  write_csv("results/ml_hybrid_stats.csv")
+  mutate(params = str_replace(name, "-.*", "") %>% str_replace("[a-zA-Z]+_", "") %>% str_replace_all("_", ", ")) %>%
+  mutate(params = paste0("(", params, ")")) %>%
+  write_csv("results/ml_hybrid_stats.csv") 

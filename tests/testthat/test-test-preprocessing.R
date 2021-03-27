@@ -17,8 +17,8 @@ test_that("El formato debe ser correcto para la prediccion", {
 
   window_names <- names(x)[1:max_window]
   pred_names <- names(x)[(max_window + 1):(max_window + max_horizon)]
-  expected_window_names <- paste("Close", "lag", (max_window - 1):0, sep = ".")
-  expected_pred_names <- paste("Close", "pred", 1:max_horizon, sep = ".")
+  expected_window_names <- paste0("w", (max_window - 1):0)
+  expected_pred_names <- paste0("h", 1:max_horizon)
 
   expect_equal(window_names, expected_window_names)
   expect_equal(pred_names, expected_pred_names)
@@ -40,8 +40,8 @@ test_that("El formato debe ser correcto para la prediccion 2", {
 
   window_names <- names(x)[1:max_window]
   pred_names <- names(x)[(max_window + 1):(max_window + max_horizon)]
-  expected_window_names <- paste("Close", "lag", (max_window - 1):0, sep = ".")
-  expected_pred_names <- paste("Close", "pred", 1:max_horizon, sep = ".")
+  expected_window_names <- paste0("w", (max_window - 1):0)
+  expected_pred_names <- paste0("h", 1:max_horizon)
 
   expect_equal(window_names, expected_window_names)
   expect_equal(pred_names, expected_pred_names)

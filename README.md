@@ -1,5 +1,7 @@
 # Seer
 
+Seer is a package and collection of scripts to predict the direction of prices in the Forex market.
+
 ## Installation
 ```r
 devtools::install_github("jmayalag/seer")
